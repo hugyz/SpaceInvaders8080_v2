@@ -4,16 +4,16 @@ Need a better understanding of the whole 8080 processor picture
 
 Space Invaders 8080 Processor Emulator
 
-<---- Points to where Hugyz is currently work on
-+++++ Finished rationally, but may need to work on more
-XXXXX Completed
+<---- Points to where Hugyz is currently work on<br/>
++++++ Finished rationally, but may need to work on more<br/>
+XXXXX Completed<br/>
 
 
 
 
-STACK more for constants
-HEAP for dynamically allocated values, longer lasting vars
-Threading in computer science is a technique that allows multiple programs to run simultaneously on a single processor
+STACK more for constants<br/>
+HEAP for dynamically allocated values, longer lasting vars<br/>
+Threading in computer science is a technique that allows multiple programs to run simultaneously on a single processor<br/>
 
 
 1) Main program initialization:
