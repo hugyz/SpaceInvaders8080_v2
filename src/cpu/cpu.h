@@ -4,24 +4,26 @@
 #include <stdint.h>
 #include "memory.h" // Include this if you need to access memory functions
 
+// Flags
+typedef struct {
+    uint8_t Z : 1; // Zero flag
+    uint8_t S : 1; // Sign flag
+    uint8_t P : 1; // Parity flag
+    uint8_t CY : 1; // Carry flag
+    uint8_t AC : 1; // Auxiliary carry flag
+    uint8_t PAD : 3; // Unused bits
+} Flags;
+
 typedef struct {
     // Registers
-    uint8_t a;    // Accumulator
-    uint8_t b, c; // BC register pair
-    uint8_t d, e; // DE register pair
-    uint8_t h, l; // HL register pair
-    uint16_t sp;  // Stack pointer
-    uint16_t pc;  // Program counter
+    uint8_t A;    // Accumulator
+    uint8_t B, C; // BC register pair
+    uint8_t D, E; // DE register pair
+    uint8_t H, L; // HL register pair
+    uint16_t SP;  // Stack pointer
+    uint16_t PC;  // Program counter
 
-    // Flags
-    struct {
-        uint8_t z : 1; // Zero flag
-        uint8_t s : 1; // Sign flag
-        uint8_t p : 1; // Parity flag
-        uint8_t cy : 1; // Carry flag
-        uint8_t ac : 1; // Auxiliary carry flag
-        uint8_t pad : 3; // Unused bits
-    } flags;
+    Flags *flags;
 
     // Other CPU state
     uint8_t interrupt_enable;
@@ -29,11 +31,13 @@ typedef struct {
 } CPU;
 
 // Function prototypes
+
+
+void emulate_8080(CPU *cpu);
+uint8_t cpu_execute_instruction(CPU* cpu);
+
 CPU* cpu_create(void);
 void cpu_destroy(CPU* cpu);
-void cpu_run();
 void cpu_reset(CPU* cpu);
-void cpu_step(CPU* cpu);
-uint8_t cpu_execute_instruction(CPU* cpu);
 
 #endif

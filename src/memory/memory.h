@@ -27,13 +27,11 @@
 #define RAM_MIRROR_START    0x4000
 #define RAM_MIRROR_END      0xFFFF
 
-extern uint8_t memory[MEMORY_SIZE];
-
 void initialize_memory(void);
-void dump_memory(uint16_t start_address, uint16_t end_address);
 void load_rom_into_mem(void);
 uint8_t read_memory(uint16_t address);
 void write_memory(uint16_t address, uint8_t value);
+void free_memory();
 
 #endif
 

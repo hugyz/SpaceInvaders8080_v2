@@ -1,23 +1,28 @@
 Function of CPU
 
-Fetch, decode, execute: 
+    uint8_t Z : 1; // Zero flag
+    uint8_t S : 1; // Sign flag
+    uint8_t P : 1; // Parity flag
+    uint8_t CY : 1; // Carry flag
+    uint8_t AC : 1; // Auxiliary carry flag
+    uint8_t PAD : 3; // Unused bits
 
-    This is the heart of the CPU emulation. You'll fetch an opcode from memory, decode it to determine what operation to perform, and then execute it by modifying the CPU state (registers, flags, memory, etc.).
+    // Registers
+    uint8_t A;    // Accumulator
+    uint8_t B, C; // BC register pair
+    uint8_t D, E; // DE register pair
+    uint8_t H, L; // HL register pair
+    uint16_t SP;  // Stack pointer
+    uint16_t PC;  // Program counter
+    uint8_t interrupt_enable;
+    uint32_t cycles; // Cycle counter
 
 
-Opcode handling: 
+execute_instruction:
 
-    Each opcode will have an associated function or handler that knows how to perform the operation. For example, 0x00 is a no-op (NOP), so it would just increment the program counter.
+    Fetch: Retrieve the opcode (instruction) from memory at the current program counter (PC).
+    Increment PC: Move the program counter to the next instruction in memory.
+    Decode: Determine which operation to perform based on the fetched opcode.
+    Execute: Carry out the corresponding operation (e.g., arithmetic, logic, I/O, control flow).
+    Update PC and Cycle Count: Adjust the program counter (if needed) and update the cycle count.
 
-
-Interrupt handling: 
-    
-    Space Invaders uses interrupts, so your CPU emulation will also need to handle them.
-
-
-The CPU struct contains all necessary registers, flags, and state information.
-cpu_create() allocates memory for a new CPU instance.
-cpu_destroy() frees the allocated memory.
-cpu_reset() initializes the CPU to a known state.
-cpu_step() executes one instruction cycle.
-cpu_execute_instruction() is where you'll implement the logic for each opcode

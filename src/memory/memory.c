@@ -6,13 +6,26 @@
 #include <stdlib.h>
 #include <string.h>
 
-uint8_t memory[MEMORY_SIZE];
+static uint8_t * memory;
 
-void initialize_memory(void) {
-    memset(memory, 0, MEMORY_SIZE);
+void memory_init(void) {
+    memory = (uint8_t *)malloc(MEMORY_SIZE);
+    memset(memory, 0, MEMORY_SIZE);  // Initialize memory to zero
+}
+void memory_free() {
+    free(memory);
+    memory = NULL;
+}
+uint8_t read_memory(uint16_t address) {
+    if (MEMORY_START <= address < MEMORY_END) return memory[address];
+    else error("read_memory out of bounds");
 }
 
-void dump_memory(uint16_t start_address, uint16_t end_address) {}
+void write_memory(uint16_t address, uint8_t value) {
+    if(ROM_START <= address < ROM_END) error("cannot write to rom");
+    else memory[address] = value;
+}
+
 
 void load_rom_into_mem(void) {
     const char* rom_file_path = "C:\\Users\\hugoz\\OneDrive\\Desktop\\Projects\\SpaceInvaders8080_v2\\roms\\invaders";
@@ -39,14 +52,4 @@ void load_rom_into_mem(void) {
     }
     fclose(rom_file);
     printf("ROM loaded successfully. Size: %zu bytes\n", bytes_read);
-}
-
-uint8_t read_memory(uint16_t address) {
-    if (MEMORY_START <= address < MEMORY_END) return memory[address];
-    else error("read_memory out of bounds");
-}
-
-void write_memory(uint16_t address, uint8_t value) {
-    if(ROM_START <= address < ROM_END) error("cannot write to rom");
-    else memory[address] = value;
 }

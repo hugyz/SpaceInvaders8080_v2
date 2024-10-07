@@ -1,0 +1,6 @@
+{
+    "files.associations": {
+        "output.h": "c",
+        "random": "c"
+    }
+}
