@@ -1,6 +1,19 @@
 {
     "files.associations": {
         "output.h": "c",
-        "random": "c"
+        "random": "c",
+        "ratio": "c",
+        "system_error": "c",
+        "array": "c",
+        "functional": "c",
+        "tuple": "c",
+        "type_traits": "c",
+        "utility": "c",
+        "utils.h": "c",
+        "stdint.h": "c",
+        "memory.h": "c",
+        "cpu.h": "c",
+        "cassert": "cpp",
+        "input.h": "c"
     }
 }

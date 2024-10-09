@@ -5,7 +5,7 @@
 
 //further specifications about memory located in memory_map.md
 #define MEMORY_START        0x0000
-#define MEMORY_END          0x0000
+#define MEMORY_END          0xFFFF
 #define MEMORY_SIZE         (MEMORY_END - MEMORY_START + 1)
 
 #define ROM_START           0x0000
@@ -27,11 +27,11 @@
 #define RAM_MIRROR_START    0x4000
 #define RAM_MIRROR_END      0xFFFF
 
-void initialize_memory(void);
+void memory_init(void);
 void load_rom_into_mem(void);
 uint8_t read_memory(uint16_t address);
 void write_memory(uint16_t address, uint8_t value);
-void free_memory();
+void memory_free();
 
 #endif
 

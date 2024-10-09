@@ -4,9 +4,9 @@ Need a better understanding of the whole 8080 processor picture
 
 Space Invaders 8080 Processor Emulator
 
-<---- Points to where Hugyz is currently work on
-+++++ Finished rationally, but may need to work on more
-XXXXX Completed
+<---- Points to where Hugyz is currently work on<br/>
++++++ Finished rationally, but may need to work on more<br/>
+XXXXX Completed<br/>
 
 
 Calloc instead of memset?
@@ -17,9 +17,9 @@ extern avaliable to all files that include
 arr[] goes to stack
 *arr goes to heap
 
-STACK more for constants
-HEAP for dynamically allocated values, longer lasting vars
-Threading in computer science is a technique that allows multiple programs to run simultaneously on a single processor
+STACK more for constants<br/>
+HEAP for dynamically allocated values, longer lasting vars<br/>
+Threading in computer science is a technique that allows multiple programs to run simultaneously on a single processor<br/>
 
 
 1) Main program initialization:
@@ -64,6 +64,7 @@ Threading in computer science is a technique that allows multiple programs to ru
     
     
     After these initialization steps, the program would likely enter its main emulation loop, where it begins executing instructions from the loaded ROM.
+<<<<<<< HEAD
 
 
 
@@ -107,3 +108,5 @@ CPU Emulator: This will mimic the 8080's behavior, executing instructions and ma
 Memory Management: A way to load the Space Invaders ROM into memory and emulate RAM behavior.
 Display and Sound: Functions to render graphics and produce sounds.
 Input Handling: Functions to capture user input and pass them to the emulated CPU.
+=======
+>>>>>>> 87c6bad7679a497667bae3526aa8ee4afabf2a0b

@@ -1,7 +1,6 @@
 #include "utils.h"
 
 #include <stdio.h>
-#include <stdlib.h>
 
 void error_stub(void) {
   fprintf(stderr, "8080-emu: ");
@@ -19,8 +18,7 @@ uint8_t parity(uint16_t value) {
         value &= (value - 1);  // Clear the lowest set bit
         count++;
     }
-    if(count%2 == 0) return 1;
-    else return 0;
+    return (count % 2 == 0) ? 1 : 0;
 }
 
 

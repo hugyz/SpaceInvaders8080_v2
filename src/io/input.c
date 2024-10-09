@@ -1,5 +1,5 @@
 #include "input.h"
-
+#include "cpu.h"
 
 static uint8_t * input_ports;  // Static array of I/O ports
 
@@ -19,4 +19,8 @@ uint8_t input_read(uint8_t port) {
 
 void input_write(uint8_t port, uint8_t value) {
     input_ports[port] = value;
+}
+
+uint8_t machine_in(uint8_t state, uint8_t port){
+    
 }

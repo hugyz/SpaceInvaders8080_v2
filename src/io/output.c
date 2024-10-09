@@ -1,4 +1,5 @@
 #include "output.h"
+#include "cpu.h"
 
 static uint8_t *output_ports;  // Static array of I/O ports
 
@@ -20,3 +21,4 @@ void output_write(uint8_t port, uint8_t value) {
     output_ports[port] = value;
 }
 
+uint8_t machine_out(uint8_t state, uint8_t port){}
