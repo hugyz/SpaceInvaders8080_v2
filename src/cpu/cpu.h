@@ -42,7 +42,6 @@ typedef struct {
 
 void setCallbackIn(CPU *cpu, CallbackIn callback);
 void setCallbackOut(CPU *cpu, CallbackOut callback);
-void emulate_8080(CPU *cpu);
 uint8_t cpu_execute_instruction(CPU* cpu);
 CPU* cpu_init(void);
 void cpu_free(CPU* cpu);
@@ -50,5 +49,6 @@ void cpu_reset(CPU* cpu);
 void ret(CPU *cpu);
 void interrupt(CPU *cpu, int interrupt_num);
 int get_num_steps(CPU *cpu);
+uint16_t makeWord(uint8_t hi, uint8_t lo);
 
 #endif

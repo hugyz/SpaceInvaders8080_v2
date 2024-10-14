@@ -1,6 +1,10 @@
 # Compiler and flags
 CC = gcc
-CFLAGS = -w -I./src -I./src/cpu -I./src/memory -I./src/io -I./src/utils -I./src/video -I./src/sound
+CFLAGS = -w -I./src -I./src/cpu -I./src/memory -I./src/io -I./src/utils -I"C:/SDL2/include" -I"C:/SDL2_MIXER/include"
+
+# SDL2 and SDL2_mixer paths (for 32-bit MinGW)
+SDL2_LIB = -L"C:/SDL2/lib/x86" -lSDL2main -lSDL2
+SDL2_MIXER_LIB = -L"C:/SDL2_MIXER/lib/x86" -lSDL2_mixer
 
 # Object files
 OBJ = src/cpu/cpu.o \
@@ -8,18 +12,16 @@ OBJ = src/cpu/cpu.o \
       src/memory/memory.o \
       src/io/input.o \
       src/io/output.o \
-      src/utils/utils.o \
-      src/video/video.o \
-      src/sound/sound.o
+      src/utils/utils.o
 
 # Target executable placed into the 'bin' folder
 TARGET = bin/space_invaders_emulator.exe
 
 # Build the emulator
 $(TARGET): $(OBJ) src/main.c
-	$(CC) $(CFLAGS) -o $(TARGET) $(OBJ) src/main.c
+	$(CC) $(CFLAGS) -o $(TARGET) $(OBJ) src/main.c $(SDL2_LIB) $(SDL2_MIXER_LIB)
 
-# Individual object file compilation rules
+# Compilation rules
 src/cpu/cpu.o: src/cpu/cpu.c src/cpu/cpu.h
 	$(CC) $(CFLAGS) -c src/cpu/cpu.c -o src/cpu/cpu.o
 
@@ -38,15 +40,6 @@ src/io/output.o: src/io/output.c src/io/output.h
 src/utils/utils.o: src/utils/utils.c src/utils/utils.h
 	$(CC) $(CFLAGS) -c src/utils/utils.c -o src/utils/utils.o
 
-src/video/video.o: src/video/video.c src/video/video.h
-	$(CC) $(CFLAGS) -c src/video/video.c -o src/video/video.o
-
-src/sound/sound.o: src/sound/sound.c src/sound/sound.h
-	$(CC) $(CFLAGS) -c src/sound/sound.c -o src/sound/sound.o
-
 # Clean object files and the executable
 clean:
-	# Clean object files and the executable
-clean:
-	del /Q src\cpu\cpu.o src\cpu\update_flags.o src\memory\memory.o src\io\input.o src\io\output.o src\utils\utils.o src\video\video.o src\sound\sound.o
-	
+	del /Q bin\space_invaders_emulator.exe src\cpu\cpu.o src\cpu\update_flags.o src\memory\memory.o src\io\input.o src\io\output.o src\utils\utils.o

@@ -4,9 +4,16 @@ Need a better understanding of the whole 8080 processor picture
 
 Space Invaders 8080 Processor Emulator
 
+Big Pace xdd - 10/13/24
+
 <---- Points to where Hugyz is currently work on<br/>
 +++++ Finished rationally, but may need to work on more<br/>
 XXXXX Completed<br/>
+
+Handle GUI
+SDL2 - 2.30.8
+SDL2_mixer 2.8.0
+
 
 
 Calloc instead of memset?

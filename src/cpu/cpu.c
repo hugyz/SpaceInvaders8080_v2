@@ -89,24 +89,6 @@ void cpu_reset(CPU* cpu) {
     else error("no instance of cpu/flags/callback when resetting");
 }
 
-void emulate_8080(CPU *cpu) {/*
-    while (1) {
-        // Fetch, decode, and execute the next instruction
-        execute_instruction(cpu);
-        
-        // Handle user inputs (e.g., movement, shooting)
-        handle_input(cpu);
-        
-        // Update the display to reflect any changes in the game
-        render_display(cpu);
-        
-        // Optionally: Handle sound and timing
-        // sound_emulation(cpu);
-        // sleep_for_frame();
-    }
-    */
-}
-
 uint16_t read_opcode_data_word(CPU *cpu) {
     uint16_t value = ((uint16_t)(cpu->PC+2) << 8) | (uint16_t)(cpu->PC+1);
     return value;
@@ -152,1401 +134,1256 @@ uint8_t cpu_execute_instruction(CPU* cpu) {
     uint16_t opcode_size = 1;           //default bytes taken by instruction
 
     switch (*opcode) {
-        case 0x00: {         //NOP
-            break;
-        }
-        case 0x01: {         //LXI B, D16
+        case 0x00: {break;}  //NOP
+        case 0x01: {         // LXI B, D16
             cpu->C = read_memory(cpu->PC + 1);
             cpu->B = read_memory(cpu->PC + 2);
             opcode_size = 3;
             break;
         }
-        case 0x02: {         //STAX B
-            uint16_t address = (cpu->B << 8) | (cpu->C);
+        case 0x02: {         // STAX B
+            uint16_t address = makeWord(cpu->B, cpu->C);
             write_memory(address, cpu->A);
             break;
         }
-        case 0x03: {         //INX B
-            uint16_t value = ((cpu->B << 8) | cpu->C) + 1; 
-            cpu->C = value;
+        case 0x03: {         // INX B
+            uint16_t value = makeWord(cpu->B, cpu->C) + 1;
             cpu->B = value >> 8;
+            cpu->C = value & 0xFF;
             break;
         }
-        case 0x04: {         //INR B
-            cpu->B += 1;
+        case 0x04: {         // INR B
+            cpu->B++;
             update_byte_SZAP(cpu, cpu->B);
             break;
         }
-        case 0x05: {         //DCR B
-            cpu->B -= 1;
+        case 0x05: {         // DCR B
+            cpu->B--;
             update_byte_SZAP(cpu, cpu->B);
             break;
         }
-        case 0x06: {         //MVI B, D8      
+        case 0x06: {         // MVI B, D8
             cpu->B = read_memory(cpu->PC + 1);
             opcode_size = 2;
             break;
         }
-        case 0x07: {         //RLC
+        case 0x07: {         // RLC
             cpu->flags->CY = (cpu->A >> 7) & 1;
             cpu->A = (cpu->A << 1) | cpu->flags->CY;
             break;
         }
-        case 0x08: {         //*NOP
+        case 0x08: {break;}  //*NOP
+        case 0x09: {         // DAD B
+            uint32_t result = makeWord(cpu->H, cpu->L) + makeWord(cpu->B, cpu->C);
+            cpu->H = result >> 8;
+            cpu->L = result & 0xFF;
+            cpu->flags->CY = (result > 0xFFFF);
             break;
         }
-        case 0x09: {         //DAD B (Add BC to HL)
-            uint16_t hl = (cpu->H << 8) + cpu->L;
-            uint16_t bc = (cpu->B << 8) + cpu->C;
-            uint32_t value = hl + bc;
-            update_word_CY(cpu, value);
-            cpu->H = (value >> 8) & 0xff;
-            cpu->L = value & 0xff;
+        case 0x0A: {         // LDAX B
+            cpu->A = read_memory(makeWord(cpu->B, cpu->C));
             break;
         }
-        case 0x0A: {         //LDAX B (Load A from address in BC)
-            uint16_t address = (cpu->B << 8) + cpu->C;
-            cpu->A = read_memory(address);
+        case 0x0B: {         // DCX B
+            uint16_t value = makeWord(cpu->B, cpu->C) - 1;
+            cpu->B = value >> 8;
+            cpu->C = value & 0xFF;
             break;
         }
-        case 0x0B: {         //DCX B
-            uint16_t bc = (cpu->B << 8) | cpu->C;
-            bc -= 1;
-            cpu->B = (bc >> 8) & 0xff;
-            cpu->C = bc & 0xff;
-            break;
-        }
-        case 0x0C: {         //INR C
-            cpu->C += 1;
+        case 0x0C: {         // INR C
+            cpu->C++;
             update_byte_SZAP(cpu, cpu->C);
             break;
         }
-        case 0x0D: {         //DCR C
-            cpu->C -= 1;
+        case 0x0D: {         // DCR C
+            cpu->C--;
             update_byte_SZAP(cpu, cpu->C);
             break;
         }
-        case 0x0E: {         //MVI C, D8
+        case 0x0E: {         // MVI C, D8
             cpu->C = read_memory(cpu->PC + 1);
             opcode_size = 2;
             break;
         }
-        case 0x0F: {         //RRC
-            cpu->flags->CY = cpu->A & 0x01;
+        case 0x0F: {         // RRC
+            cpu->flags->CY = cpu->A & 1;
             cpu->A = (cpu->A >> 1) | (cpu->flags->CY << 7);
             break;
         }
-        case 0x11: {         //LXI D, D16
+        case 0x10: {break;}  //*NOP
+        case 0x11: {         // LXI D, D16
             cpu->E = read_memory(cpu->PC + 1);
             cpu->D = read_memory(cpu->PC + 2);
             opcode_size = 3;
             break;
         }
-        case 0x12: {         //STAX D
-            uint16_t address = (cpu->D << 8) | cpu->E;
-            write_memory(address, cpu->A);
+        case 0x12: {         // STAX D
+            write_memory(makeWord(cpu->D, cpu->E), cpu->A);
             break;
         }
-        case 0x13: {         //INX D
-            uint16_t value = (cpu->D << 8) | cpu->E;
-            value += 1;
-            cpu->E = value & 0xff;
-            cpu->D = (value >> 8) & 0xff;
+        case 0x13: {         // INX D
+            uint16_t value = makeWord(cpu->D, cpu->E) + 1;
+            cpu->D = value >> 8;
+            cpu->E = value & 0xFF;
             break;
         }
-        case 0x14: {         //INR D
-            cpu->D += 1;
+        case 0x14: {         // INR D
+            cpu->D++;
             update_byte_SZAP(cpu, cpu->D);
             break;
         }
-        case 0x15: {         //DCR D
-            cpu->D -= 1;
+        case 0x15: {         // DCR D
+            cpu->D--;
             update_byte_SZAP(cpu, cpu->D);
             break;
         }
-        case 0x16: {         //MVI D, D8
+        case 0x16: {         // MVI D, D8
             cpu->D = read_memory(cpu->PC + 1);
             opcode_size = 2;
             break;
         }
-        case 0x17: {         //RAL
+        case 0x17: {         // RAL
             uint8_t bit7 = (cpu->A >> 7) & 1;
-            uint8_t bit0 = cpu->flags->CY;
-            cpu->A = (cpu->A << 1) | bit0;
+            cpu->A = (cpu->A << 1) | cpu->flags->CY;
             cpu->flags->CY = bit7;
             break;
         }
-        case 0x18: {         //*NOP
+        case 0x18: {break;}  //*NOP
+        case 0x19: {         // DAD D
+            uint32_t result = makeWord(cpu->H, cpu->L) + makeWord(cpu->D, cpu->E);
+            cpu->H = result >> 8;
+            cpu->L = result & 0xFF;
+            cpu->flags->CY = (result > 0xFFFF);
             break;
         }
-        case 0x19: {         //DAD D
-            uint32_t hl = (cpu->H << 8) | cpu->L;
-            uint32_t de = (cpu->D << 8) | cpu->E;
-            uint32_t result = hl + de;
-            update_word_CY(cpu, result);
-            cpu->H = (result >> 8) & 0xff;
-            cpu->L = result & 0xff;
+        case 0x1A: {         // LDAX D
+            cpu->A = read_memory(makeWord(cpu->D, cpu->E));
             break;
         }
-        case 0x1A: {         //LDAX D
-            uint16_t address = (cpu->D << 8) | cpu->E;
-            cpu->A = read_memory(address);
+        case 0x1B: {         // DCX D
+            uint16_t value = makeWord(cpu->D, cpu->E) - 1;
+            cpu->D = value >> 8;
+            cpu->E = value & 0xFF;
             break;
         }
-        case 0x1B: {         //DCX D
-            uint16_t de = (cpu->D << 8) | cpu->E;
-            de -= 1;
-            cpu->D = (de >> 8) & 0xff;
-            cpu->E = de & 0xff;
-            break;
-        }
-        case 0x1C: {         //INR E
-            cpu->E += 1;
+        case 0x1C: {         // INR E
+            cpu->E++;
             update_byte_SZAP(cpu, cpu->E);
             break;
         }
-        case 0x1D: {         //DCR E
-            cpu->E -= 1;
+        case 0x1D: {         // DCR E
+            cpu->E--;
             update_byte_SZAP(cpu, cpu->E);
             break;
         }
-        case 0x1E: {         //MVI E, D8
+        case 0x1E: {         // MVI E, D8
             cpu->E = read_memory(cpu->PC + 1);
             opcode_size = 2;
             break;
         }
-        case 0x1F: {         //RAR
+        case 0x1F: {         // RAR
             uint8_t bit0 = cpu->A & 1;
-            uint8_t bit7 = cpu->flags->CY;
-            cpu->A = (cpu->A >> 1) | (bit7 << 7);
+            cpu->A = (cpu->A >> 1) | (cpu->flags->CY << 7);
             cpu->flags->CY = bit0;
             break;
         }
-        case 0x21: {         //LXI H, D16
-            cpu->H = read_memory(cpu->PC + 2);
+        case 0x20: {break;}  //*NOP
+        case 0x21: {         // LXI H, D16
             cpu->L = read_memory(cpu->PC + 1);
+            cpu->H = read_memory(cpu->PC + 2);
             opcode_size = 3;
             break;
         }
-        case 0x22: {         //SHLD
+        case 0x22: {         // SHLD
             uint16_t address = read_opcode_data_word(cpu);
             write_memory(address, cpu->L);
             write_memory(address + 1, cpu->H);
             opcode_size = 3;
             break;
         }
-        case 0x23: {         //INX H
-            uint16_t value = (cpu->H << 8) | cpu->L;
-            value += 1;
-            cpu->H = (value >> 8) & 0xff;
-            cpu->L = value & 0xff;
+        case 0x23: {         // INX H
+            uint16_t value = makeWord(cpu->H, cpu->L) + 1;
+            cpu->H = value >> 8;
+            cpu->L = value & 0xFF;
             break;
         }
-        case 0x24: {         //INR H
-            cpu->H += 1;
+        case 0x24: {         // INR H
+            cpu->H++;
             update_byte_SZAP(cpu, cpu->H);
             break;
         }
-        case 0x25: {         //DCR H
-            cpu->H -= 1;
+        case 0x25: {         // DCR H
+            cpu->H--;
             update_byte_SZAP(cpu, cpu->H);
             break;
         }
-        case 0x26: {         //MVI H, D8
+        case 0x26: {         // MVI H, D8
             cpu->H = read_memory(cpu->PC + 1);
             opcode_size = 2;
             break;
         }
-        case 0x27: {         //DAA
-            if ((cpu->A & 0x0f) > 9)
+        case 0x27: {         // DAA
+            if ((cpu->A & 0x0F) > 9)
                 cpu->A += 6;
-            if (cpu->flags->CY || ((cpu->A & 0xf0) > 0x90)) {
+            if ((cpu->A & 0xF0) > 0x90 || cpu->flags->CY)
                 cpu->A += 0x60;
-                cpu->flags->CY = 1;
-            }
             update_byte_SZAP(cpu, cpu->A);
             break;
         }
-        case 0x29: {         //DAD H
-            uint32_t hl = (cpu->H << 8) | cpu->L;
-            uint32_t result = hl + hl;
-            update_word_CY(cpu, result);
-            cpu->H = (result >> 8) & 0xff;
-            cpu->L = result & 0xff;
+        case 0x28: {break;}  //*NOP
+        case 0x29: {         // DAD H
+            uint32_t result = makeWord(cpu->H, cpu->L) + makeWord(cpu->H, cpu->L);
+            cpu->H = result >> 8;
+            cpu->L = result & 0xFF;
+            cpu->flags->CY = (result > 0xFFFF);
             break;
         }
-        case 0x2A: {         //LHLD
+        case 0x2A: {         // LHLD
             uint16_t address = read_opcode_data_word(cpu);
             cpu->L = read_memory(address);
             cpu->H = read_memory(address + 1);
             opcode_size = 3;
             break;
         }
-        case 0x2B: {         //DCX H
-            uint16_t value = (cpu->H << 8) | cpu->L;
-            value -= 1;
-            cpu->H = (value >> 8) & 0xff;
-            cpu->L = value & 0xff;
+        case 0x2B: {         // DCX H
+            uint16_t value = makeWord(cpu->H, cpu->L) - 1;
+            cpu->H = value >> 8;
+            cpu->L = value & 0xFF;
             break;
         }
-        case 0x2C: {         //INR L
-            cpu->L += 1;
+        case 0x2C: {         // INR L
+            cpu->L++;
             update_byte_SZAP(cpu, cpu->L);
             break;
         }
-        case 0x2D: {         //DCR L
-            cpu->L -= 1;
+        case 0x2D: {         // DCR L
+            cpu->L--;
             update_byte_SZAP(cpu, cpu->L);
             break;
         }
-        case 0x2E: {         //MVI L, D8
+        case 0x2E: {         // MVI L, D8
             cpu->L = read_memory(cpu->PC + 1);
             opcode_size = 2;
             break;
         }
-        case 0x2F: {         //CMA
+        case 0x2F: {         // CMA
             cpu->A = ~cpu->A;
             break;
         }
-        case 0x31: {         //LXI SP, D16
+        case 0x30: {break;}  //*NOP
+        case 0x31: {         // LXI SP, D16
             cpu->SP = read_opcode_data_word(cpu);
             opcode_size = 3;
             break;
         }
-        case 0x32: {         //STA adr
-            uint16_t address = read_opcode_data_word(cpu);
-            write_memory(address, cpu->A);
+        case 0x32: {         // STA adr
+            write_memory(read_opcode_data_word(cpu), cpu->A);
             opcode_size = 3;
             break;
         }
-        case 0x33: {         //INX SP
-            cpu->SP += 1;
+        case 0x33: {         // INX SP
+            cpu->SP++;
             break;
         }
-        case 0x34: {         //INR M
-            uint16_t address = (cpu->H << 8) | cpu->L;
-            uint16_t value = read_memory(address);
-            value += 1;
-            update_byte_SZAP(cpu, value);
-            write_memory(address, value & 0xff);
-            break;
-        }
-        case 0x35: {         //DCR M
-            uint16_t address = (cpu->H << 8) | cpu->L;
-            uint16_t value = read_memory(address);
-            value -= 1;
-            update_byte_SZAP(cpu, value);
-            write_memory(address, value & 0xff);
-            break;
-        }
-        case 0x36: {         //MVI M, D8
-            uint16_t value = read_memory(cpu->PC + 1);
-            uint16_t address = (cpu->H << 8) | cpu->L;
+        case 0x34: {         // INR M
+            uint16_t address = makeWord(cpu->H, cpu->L);
+            uint8_t value = read_memory(address) + 1;
             write_memory(address, value);
+            update_byte_SZAP(cpu, value);
+            break;
+        }
+        case 0x35: {         // DCR M
+            uint16_t address = makeWord(cpu->H, cpu->L);
+            uint8_t value = read_memory(address) - 1;
+            write_memory(address, value);
+            update_byte_SZAP(cpu, value);
+            break;
+        }
+        case 0x36: {         // MVI M, D8
+            write_memory(makeWord(cpu->H, cpu->L), read_memory(cpu->PC + 1));
             opcode_size = 2;
             break;
         }
-        case 0x37: {         //STC
+        case 0x37: {         // STC
             cpu->flags->CY = 1;
             break;
         }
-        case 0x39: {         //DAD SP
-            uint32_t result = ((cpu->H << 8) | cpu->L) + cpu->SP;
-            update_word_CY(cpu, result);
-            cpu->H = (result >> 8) & 0xff;
-            cpu->L = result & 0xff;
+        case 0x38: {break;}  //*NOP
+        case 0x39: {         // DAD SP
+            uint32_t result = makeWord(cpu->H, cpu->L) + cpu->SP;
+            cpu->H = result >> 8;
+            cpu->L = result & 0xFF;
+            cpu->flags->CY = (result > 0xFFFF);
             break;
         }
-        case 0x3A: {         //LDA word
-            uint16_t address = read_opcode_data_word(cpu);
-            cpu->A = read_memory(address);
+        case 0x3A: {         // LDA adr
+            cpu->A = read_memory(read_opcode_data_word(cpu));
             opcode_size = 3;
             break;
         }
-        case 0x3B: {         //DCX SP
-            cpu->SP -= 1;
+        case 0x3B: {         // DCX SP
+            cpu->SP--;
             break;
         }
-        case 0x3C: {         //INR A
-            cpu->A += 1;
+        case 0x3C: {         // INR A
+            cpu->A++;
             update_byte_SZAP(cpu, cpu->A);
             break;
         }
-        case 0x3D: {         //DCR A
-            cpu->A -= 1;
+        case 0x3D: {         // DCR A
+            cpu->A--;
             update_byte_SZAP(cpu, cpu->A);
             break;
         }
-        case 0x3E: {         //MVI A, byte
+        case 0x3E: {         // MVI A, D8
             cpu->A = read_memory(cpu->PC + 1);
             opcode_size = 2;
             break;
         }
-        case 0x3F: {         //CMC
-            cpu->flags->CY = 1 - cpu->flags->CY;
+        case 0x3F: {         // CMC
+            cpu->flags->CY = !cpu->flags->CY;
             break;
         }
-        case 0x41: {         //MOV B,C
+        case 0x40: {break;}  // MOV B, B
+    
+        case 0x41: {         // MOV B, C
             cpu->B = cpu->C;
             break;
         }
-        case 0x42: {         //MOV B,D
+        case 0x42: {         // MOV B, D
             cpu->B = cpu->D;
             break;
         }
-        case 0x43: {         //MOV B,E
+        case 0x43: {         // MOV B, E
             cpu->B = cpu->E;
             break;
         }
-        case 0x44: {         //MOV B,H
+        case 0x44: {         // MOV B, H
             cpu->B = cpu->H;
             break;
         }
-        case 0x45: {         //MOV B,L
+        case 0x45: {         // MOV B, L
             cpu->B = cpu->L;
             break;
         }
-        case 0x46: {         //MOV B,M
-            uint16_t address = (cpu->H << 8) | cpu->L;
-            cpu->B = read_memory(address);
+        case 0x46: {         // MOV B, M
+            cpu->B = read_memory(makeWord(cpu->H, cpu->L));
             break;
         }
-        case 0x47: {         //MOV B,A
+        case 0x47: {         // MOV B, A
             cpu->B = cpu->A;
             break;
         }
-        case 0x48: {         //MOV C,B
+        case 0x48: {         // MOV C, B
             cpu->C = cpu->B;
             break;
         }
-        case 0x4A: {         //MOV C,D
+        case 0x49: {break;}  // MOV C, C
+        case 0x4A: {         // MOV C, D
             cpu->C = cpu->D;
             break;
         }
-        case 0x4B: {         //MOV C,E
+        case 0x4B: {         // MOV C, E
             cpu->C = cpu->E;
             break;
         }
-        case 0x4C: {         //MOV C,H
+        case 0x4C: {         // MOV C, H
             cpu->C = cpu->H;
             break;
         }
-        case 0x4D: {         //MOV C,L
+        case 0x4D: {         // MOV C, L
             cpu->C = cpu->L;
             break;
         }
-        case 0x4E: {         //MOV C,M
-            uint16_t address = (cpu->H << 8) | cpu->L;
-            cpu->C = read_memory(address);
+        case 0x4E: {         // MOV C, M
+            cpu->C = read_memory(makeWord(cpu->H, cpu->L));
             break;
         }
-        case 0x4F: {         //MOV C,A
+        case 0x4F: {         // MOV C, A
             cpu->C = cpu->A;
             break;
         }
-        case 0x50: {         //MOV D,B
+        case 0x50: {         // MOV D, B
             cpu->D = cpu->B;
             break;
         }
-        case 0x51: {         //MOV D,C
+        case 0x51: {         // MOV D, C
             cpu->D = cpu->C;
             break;
         }
-        case 0x53: {         //MOV D,E
+        case 0x52: {break;}   // MOV D, D
+        case 0x53: {         // MOV D, E
             cpu->D = cpu->E;
             break;
         }
-        case 0x54: {         //MOV D,H
+        case 0x54: {         // MOV D, H
             cpu->D = cpu->H;
             break;
         }
-        case 0x55: {         //MOV D,L
+        case 0x55: {         // MOV D, L
             cpu->D = cpu->L;
             break;
         }
-        case 0x56: {         //MOV D,M
-            uint16_t address = (cpu->H << 8) | cpu->L;
-            cpu->D = read_memory(address);
+        case 0x56: {         // MOV D, M
+            cpu->D = read_memory(makeWord(cpu->H, cpu->L));
             break;
         }
-        case 0x57: {         //MOV D,A
+        case 0x57: {         // MOV D, A
             cpu->D = cpu->A;
             break;
         }
-        case 0x58: {         //MOV E,B
+        case 0x58: {         // MOV E, B
             cpu->E = cpu->B;
             break;
         }
-        case 0x59: {         //MOV E,C
+        case 0x59: {         // MOV E, C
             cpu->E = cpu->C;
             break;
         }
-        case 0x5A: {         //MOV E,D
+        case 0x5A: {         // MOV E, D
             cpu->E = cpu->D;
             break;
         }
-        case 0x5C: {         //MOV E,H
+        case 0x5B: {break;}  // MOV E, E
+        case 0x5C: {         // MOV E, H
             cpu->E = cpu->H;
             break;
         }
-        case 0x5D: {         //MOV E,L
+        case 0x5D: {         // MOV E, L
             cpu->E = cpu->L;
             break;
         }
-        case 0x5E: {         //MOV E,M
-            uint16_t address = (cpu->H << 8) | cpu->L;
-            cpu->E = read_memory(address);
+        case 0x5E: {         // MOV E, M
+            cpu->E = read_memory(makeWord(cpu->H, cpu->L));
             break;
         }
-        case 0x5F: {         //MOV E,A
+        case 0x5F: {         // MOV E, A
             cpu->E = cpu->A;
             break;
         }
-        case 0x60: {         //MOV H,B
+        case 0x60: {         // MOV H, B
             cpu->H = cpu->B;
             break;
         }
-        case 0x61: {         //MOV H,C
+        case 0x61: {         // MOV H, C
             cpu->H = cpu->C;
             break;
         }
-        case 0x62: {         //MOV H,D
+        case 0x62: {         // MOV H, D
             cpu->H = cpu->D;
             break;
         }
-        case 0x63: {         //MOV H,E
+        case 0x63: {         // MOV H, E
             cpu->H = cpu->E;
             break;
         }
-        case 0x65: {         //MOV H,L
+        case 0x64: {break;}  // MOV H, H
+        case 0x65: {         // MOV H, L
             cpu->H = cpu->L;
             break;
         }
-        case 0x66: {         //MOV H,M
-            uint16_t address = (cpu->H << 8) | cpu->L;
-            cpu->H = read_memory(address);
+        case 0x66: {         // MOV H, M
+            cpu->H = read_memory(makeWord(cpu->H, cpu->L));
             break;
         }
-        case 0x67: {         //MOV H,A
+        case 0x67: {         // MOV H, A
             cpu->H = cpu->A;
             break;
         }
-        case 0x68: {         //MOV L,B
+        case 0x68: {         // MOV L, B
             cpu->L = cpu->B;
             break;
         }
-        case 0x69: {         //MOV L,C
+        case 0x69: {         // MOV L, C
             cpu->L = cpu->C;
             break;
         }
-        case 0x6A: {         //MOV L,D
+        case 0x6A: {         // MOV L, D
             cpu->L = cpu->D;
             break;
         }
-        case 0x6B: {         //MOV L,E
+        case 0x6B: {         // MOV L, E
             cpu->L = cpu->E;
             break;
         }
-        case 0x6C: {         //MOV L,H
+        case 0x6C: {         // MOV L, H
             cpu->L = cpu->H;
             break;
         }
-        case 0x6E: {         //MOV L,M
-            uint16_t address = (cpu->H << 8) | cpu->L;
-            cpu->L = read_memory(address);
+        case 0x6D: {break;}  // MOV L, L
+        case 0x6E: {         // MOV L, M
+            cpu->L = read_memory(makeWord(cpu->H, cpu->L));
             break;
         }
-        case 0x6F: {         //MOV L,A
+        case 0x6F: {         // MOV L, A
             cpu->L = cpu->A;
             break;
         }
-        case 0x70: {         //MOV M,B
-            uint16_t address = (cpu->H << 8) | cpu->L;
-            write_memory(address, cpu->B);
+        case 0x70: {         // MOV M, B
+            write_memory(makeWord(cpu->H, cpu->L), cpu->B);
             break;
         }
-        case 0x71: {         //MOV M,C
-            uint16_t address = (cpu->H << 8) | cpu->L;
-            write_memory(address, cpu->C);
+        case 0x71: {         // MOV M, C
+            write_memory(makeWord(cpu->H, cpu->L), cpu->C);
             break;
         }
-        case 0x72: {         //MOV M,D
-            uint16_t address = (cpu->H << 8) | cpu->L;
-            write_memory(address, cpu->D);
+        case 0x72: {         // MOV M, D
+            write_memory(makeWord(cpu->H, cpu->L), cpu->D);
             break;
         }
-        case 0x73: {         //MOV M,E
-            uint16_t address = (cpu->H << 8) | cpu->L;
-            write_memory(address, cpu->E);
+        case 0x73: {         // MOV M, E
+            write_memory(makeWord(cpu->H, cpu->L), cpu->E);
             break;
         }
-        case 0x74: {         //MOV M,H
-            uint16_t address = (cpu->H << 8) | cpu->L;
-            write_memory(address, cpu->H);
+        case 0x74: {         // MOV M, H
+            write_memory(makeWord(cpu->H, cpu->L), cpu->H);
             break;
         }
-        case 0x75: {         //MOV M,L
-            uint16_t address = (cpu->H << 8) | cpu->L;
-            write_memory(address, cpu->L);
+        case 0x75: {         // MOV M, L
+            write_memory(makeWord(cpu->H, cpu->L), cpu->L);
             break;
         }
-        case 0x77: {         //MOV M,A
-            uint16_t address = (cpu->H << 8) | cpu->L;
-            write_memory(address, cpu->A);
+        case 0x76: {break;}  // HLT (Halt)
+        case 0x77: {         // MOV M, A
+            write_memory(makeWord(cpu->H, cpu->L), cpu->A);
             break;
         }
-        case 0x78: {         //MOV A,B
+        case 0x78: {         // MOV A, B
             cpu->A = cpu->B;
             break;
         }
-        case 0x79: {         //MOV A,C
+        case 0x79: {         // MOV A, C
             cpu->A = cpu->C;
             break;
         }
-        case 0x7A: {         //MOV A,D
+        case 0x7A: {         // MOV A, D
             cpu->A = cpu->D;
             break;
         }
-        case 0x7B: {         //MOV A,E
+        case 0x7B: {         // MOV A, E
             cpu->A = cpu->E;
             break;
         }
-        case 0x7C: {         //MOV A,H
+        case 0x7C: {         // MOV A, H
             cpu->A = cpu->H;
             break;
         }
-        case 0x7D: {         //MOV A,L
+        case 0x7D: {         // MOV A, L
             cpu->A = cpu->L;
             break;
         }
-        case 0x7E: {         //MOV A,M
-            uint16_t address = (cpu->H << 8) | cpu->L;
-            cpu->A = read_memory(address);
+        case 0x7E: {         // MOV A, M
+            cpu->A = read_memory(makeWord(cpu->H, cpu->L));
             break;
         }
-        case 0x80: {         //ADD B
-            uint16_t answer = (uint16_t)cpu->A + (uint16_t)cpu->B;
-            update_byte_SZAP(cpu, answer);
-            update_byte_CY(cpu, answer);
-            cpu->A = answer & 0xff;
+        case 0x7F: {break;}  // MOV A, A
+    
+
+        case 0x80: {         // ADD B
+            uint16_t result = cpu->A + cpu->B;
+            update_byte_SZAP(cpu, result);
+            cpu->flags->CY = (result > 0xFF);
+            cpu->A = result & 0xFF;
             break;
         }
-        case 0x81: {         //ADD C
-            uint16_t answer = (uint16_t)cpu->A + (uint16_t)cpu->C;
-            update_byte_SZAP(cpu, answer);
-            update_byte_CY(cpu, answer);
-            cpu->A = answer & 0xff;
+        case 0x81: {         // ADD C
+            uint16_t result = cpu->A + cpu->C;
+            update_byte_SZAP(cpu, result);
+            cpu->flags->CY = (result > 0xFF);
+            cpu->A = result & 0xFF;
             break;
         }
-        case 0x82: {         //ADD D
-            uint16_t answer = (uint16_t)cpu->A + (uint16_t)cpu->D;
-            update_byte_SZAP(cpu, answer);
-            update_byte_CY(cpu, answer);
-            cpu->A = answer & 0xff;
+        case 0x82: {         // ADD D
+            uint16_t result = cpu->A + cpu->D;
+            update_byte_SZAP(cpu, result);
+            cpu->flags->CY = (result > 0xFF);
+            cpu->A = result & 0xFF;
             break;
         }
-        case 0x83: {         //ADD E
-            uint16_t answer = (uint16_t)cpu->A + (uint16_t)cpu->E;
-            update_byte_SZAP(cpu, answer);
-            update_byte_CY(cpu, answer);
-            cpu->A = answer & 0xff;
+        case 0x83: {         // ADD E
+            uint16_t result = cpu->A + cpu->E;
+            update_byte_SZAP(cpu, result);
+            cpu->flags->CY = (result > 0xFF);
+            cpu->A = result & 0xFF;
             break;
         }
-        case 0x84: {         //ADD H
-            uint16_t answer = (uint16_t)cpu->A + (uint16_t)cpu->H;
-            update_byte_SZAP(cpu, answer);
-            update_byte_CY(cpu, answer);
-            cpu->A = answer & 0xff;
+        case 0x84: {         // ADD H
+            uint16_t result = cpu->A + cpu->H;
+            update_byte_SZAP(cpu, result);
+            cpu->flags->CY = (result > 0xFF);
+            cpu->A = result & 0xFF;
             break;
         }
-        case 0x85: {         //ADD L
-            uint16_t answer = (uint16_t)cpu->A + (uint16_t)cpu->L;
-            update_byte_SZAP(cpu, answer);
-            update_byte_CY(cpu, answer);
-            cpu->A = answer & 0xff;
+        case 0x85: {         // ADD L
+            uint16_t result = cpu->A + cpu->L;
+            update_byte_SZAP(cpu, result);
+            cpu->flags->CY = (result > 0xFF);
+            cpu->A = result & 0xFF;
             break;
         }
-        case 0x86: {         //ADD M
-            uint16_t address = (cpu->H << 8) | cpu->L;
-            uint16_t answer = (uint16_t)cpu->A + (uint16_t)read_memory(address);
-            update_byte_SZAP(cpu, answer);
-            update_byte_CY(cpu, answer);
-            cpu->A = answer & 0xff;
+        case 0x86: {         // ADD M
+            uint8_t value = read_memory(makeWord(cpu->H, cpu->L));
+            uint16_t result = cpu->A + value;
+            update_byte_SZAP(cpu, result);
+            cpu->flags->CY = (result > 0xFF);
+            cpu->A = result & 0xFF;
             break;
         }
-        case 0x87: {         //ADD A
-            uint16_t answer = (uint16_t)cpu->A + (uint16_t)cpu->A;
-            update_byte_SZAP(cpu, answer);
-            update_byte_CY(cpu, answer);
-            cpu->A = answer & 0xff;
+        case 0x87: {         // ADD A
+            uint16_t result = cpu->A + cpu->A;
+            update_byte_SZAP(cpu, result);
+            cpu->flags->CY = (result > 0xFF);
+            cpu->A = result & 0xFF;
             break;
         }
-        case 0x88: {         //ADC B
-            uint16_t value = cpu->A + (uint16_t)cpu->B + cpu->flags->CY;
-            update_byte_CY(cpu, value);
-            update_byte_SZAP(cpu, value);
-            cpu->A = value & 0xff;
+        case 0x88: {         // ADC B
+            uint16_t result = cpu->A + cpu->B + cpu->flags->CY;
+            update_byte_SZAP(cpu, result);
+            cpu->flags->CY = (result > 0xFF);
+            cpu->A = result & 0xFF;
             break;
         }
-        case 0x89: {         //ADC C
-            uint16_t value = cpu->A + (uint16_t)cpu->C + cpu->flags->CY;
-            update_byte_CY(cpu, value);
-            update_byte_SZAP(cpu, value);
-            cpu->A = value & 0xff;
+        case 0x89: {         // ADC C
+            uint16_t result = cpu->A + cpu->C + cpu->flags->CY;
+            update_byte_SZAP(cpu, result);
+            cpu->flags->CY = (result > 0xFF);
+            cpu->A = result & 0xFF;
             break;
         }
-        case 0x8A: {         //ADC D
-            uint16_t value = cpu->A + (uint16_t)cpu->D + cpu->flags->CY;
-            update_byte_CY(cpu, value);
-            update_byte_SZAP(cpu, value);
-            cpu->A = value & 0xff;
+        case 0x8A: {         // ADC D
+            uint16_t result = cpu->A + cpu->D + cpu->flags->CY;
+            update_byte_SZAP(cpu, result);
+            cpu->flags->CY = (result > 0xFF);
+            cpu->A = result & 0xFF;
             break;
         }
-        case 0x8B: {         //ADC E
-            uint16_t value = cpu->A + (uint16_t)cpu->E + cpu->flags->CY;
-            update_byte_CY(cpu, value);
-            update_byte_SZAP(cpu, value);
-            cpu->A = value & 0xff;
+        case 0x8B: {         // ADC E
+            uint16_t result = cpu->A + cpu->E + cpu->flags->CY;
+            update_byte_SZAP(cpu, result);
+            cpu->flags->CY = (result > 0xFF);
+            cpu->A = result & 0xFF;
             break;
         }
-        case 0x8C: {         //ADC H
-            uint16_t value = cpu->A + (uint16_t)cpu->H + cpu->flags->CY;
-            update_byte_CY(cpu, value);
-            update_byte_SZAP(cpu, value);
-            cpu->A = value & 0xff;
+        case 0x8C: {         // ADC H
+            uint16_t result = cpu->A + cpu->H + cpu->flags->CY;
+            update_byte_SZAP(cpu, result);
+            cpu->flags->CY = (result > 0xFF);
+            cpu->A = result & 0xFF;
             break;
         }
-        case 0x8D: {         //ADC L
-            uint16_t value = cpu->A + (uint16_t)cpu->L + cpu->flags->CY;
-            update_byte_CY(cpu, value);
-            update_byte_SZAP(cpu, value);
-            cpu->A = value & 0xff;
+        case 0x8D: {         // ADC L
+            uint16_t result = cpu->A + cpu->L + cpu->flags->CY;
+            update_byte_SZAP(cpu, result);
+            cpu->flags->CY = (result > 0xFF);
+            cpu->A = result & 0xFF;
             break;
         }
-        case 0x8E: {         //ADC M
-            uint16_t address = (cpu->H << 8) | cpu->L;
-            uint16_t value = cpu->A + (uint16_t)read_memory(address) + cpu->flags->CY;
-            update_byte_CY(cpu, value);
-            update_byte_SZAP(cpu, value);
-            cpu->A = value & 0xff;
+        case 0x8E: {         // ADC M
+            uint8_t value = read_memory(makeWord(cpu->H, cpu->L));
+            uint16_t result = cpu->A + value + cpu->flags->CY;
+            update_byte_SZAP(cpu, result);
+            cpu->flags->CY = (result > 0xFF);
+            cpu->A = result & 0xFF;
             break;
         }
-        case 0x8F: {         //ADC A
-            uint16_t value = cpu->A + (uint16_t)cpu->A + cpu->flags->CY;
-            update_byte_CY(cpu, value);
-            update_byte_SZAP(cpu, value);
-            cpu->A = value & 0xff;
+        case 0x8F: {         // ADC A
+            uint16_t result = cpu->A + cpu->A + cpu->flags->CY;
+            update_byte_SZAP(cpu, result);
+            cpu->flags->CY = (result > 0xFF);
+            cpu->A = result & 0xFF;
             break;
         }
-        case 0x90: {         //SUB B
-            uint16_t answer = (uint16_t)cpu->A - (uint16_t)cpu->B;
-            update_byte_SZAP(cpu, answer);
-            update_byte_CY(cpu, answer);
-            cpu->A = answer & 0xff;
+        case 0x90: {         // SUB B
+            uint16_t result = cpu->A - cpu->B;
+            update_byte_SZAP(cpu, result);
+            cpu->flags->CY = (cpu->A < cpu->B);
+            cpu->A = result & 0xFF;
             break;
         }
-        case 0x91: {         //SUB C
-            uint16_t answer = (uint16_t)cpu->A - (uint16_t)cpu->C;
-            update_byte_SZAP(cpu, answer);
-            update_byte_CY(cpu, answer);
-            cpu->A = answer & 0xff;
+        case 0x91: {         // SUB C
+            uint16_t result = cpu->A - cpu->C;
+            update_byte_SZAP(cpu, result);
+            cpu->flags->CY = (cpu->A < cpu->C);
+            cpu->A = result & 0xFF;
             break;
         }
-        case 0x92: {         //SUB D
-            uint16_t answer = (uint16_t)cpu->A - (uint16_t)cpu->D;
-            update_byte_SZAP(cpu, answer);
-            update_byte_CY(cpu, answer);
-            cpu->A = answer & 0xff;
+        case 0x92: {         // SUB D
+            uint16_t result = cpu->A - cpu->D;
+            update_byte_SZAP(cpu, result);
+            cpu->flags->CY = (cpu->A < cpu->D);
+            cpu->A = result & 0xFF;
             break;
         }
-        case 0x93: {         //SUB E
-            uint16_t answer = (uint16_t)cpu->A - (uint16_t)cpu->E;
-            update_byte_SZAP(cpu, answer);
-            update_byte_CY(cpu, answer);
-            cpu->A = answer & 0xff;
+        case 0x93: {         // SUB E
+            uint16_t result = cpu->A - cpu->E;
+            update_byte_SZAP(cpu, result);
+            cpu->flags->CY = (cpu->A < cpu->E);
+            cpu->A = result & 0xFF;
             break;
         }
-        case 0x94: {         //SUB H
-            uint16_t answer = (uint16_t)cpu->A - (uint16_t)cpu->H;
-            update_byte_SZAP(cpu, answer);
-            update_byte_CY(cpu, answer);
-            cpu->A = answer & 0xff;
+        case 0x94: {         // SUB H
+            uint16_t result = cpu->A - cpu->H;
+            update_byte_SZAP(cpu, result);
+            cpu->flags->CY = (cpu->A < cpu->H);
+            cpu->A = result & 0xFF;
             break;
         }
-        case 0x95: {         //SUB L
-            uint16_t answer = (uint16_t)cpu->A - (uint16_t)cpu->L;
-            update_byte_SZAP(cpu, answer);
-            update_byte_CY(cpu, answer);
-            cpu->A = answer & 0xff;
+        case 0x95: {         // SUB L
+            uint16_t result = cpu->A - cpu->L;
+            update_byte_SZAP(cpu, result);
+            cpu->flags->CY = (cpu->A < cpu->L);
+            cpu->A = result & 0xFF;
             break;
         }
-        case 0x96: {         //SUB M
-            uint16_t address = (cpu->H << 8) | cpu->L;
-            uint16_t answer = (uint16_t)cpu->A - (uint16_t)read_memory(address);
-            update_byte_SZAP(cpu, answer);
-            update_byte_CY(cpu, answer);
-            cpu->A = answer & 0xff;
+        case 0x96: {         // SUB M
+            uint8_t value = read_memory(makeWord(cpu->H, cpu->L));
+            uint16_t result = cpu->A - value;
+            update_byte_SZAP(cpu, result);
+            cpu->flags->CY = (cpu->A < value);
+            cpu->A = result & 0xFF;
             break;
         }
-        case 0x97: {         //SUB A
-            uint16_t answer = (uint16_t)cpu->A - (uint16_t)cpu->A;
-            update_byte_SZAP(cpu, answer);
-            update_byte_CY(cpu, answer);
-            cpu->A = answer & 0xff;
+        case 0x97: {         // SUB A
+            uint16_t result = cpu->A - cpu->A;
+            update_byte_SZAP(cpu, result);
+            cpu->flags->CY = 0;
+            cpu->A = result & 0xFF;
             break;
         }
-        case 0x98: {         //SBB B
-            uint16_t answer = (uint16_t)cpu->A - (uint16_t)cpu->B - cpu->flags->CY;
-            update_byte_SZAP(cpu, answer);
-            update_byte_CY(cpu, answer);
-            cpu->A = answer & 0xff;
+        case 0x98: {         // SBB B
+            uint16_t result = cpu->A - cpu->B - cpu->flags->CY;
+            update_byte_SZAP(cpu, result);
+            cpu->flags->CY = (cpu->A < (cpu->B + cpu->flags->CY));
+            cpu->A = result & 0xFF;
             break;
         }
-        case 0x99: {         //SBB C
-            uint16_t answer = (uint16_t)cpu->A - (uint16_t)cpu->C - cpu->flags->CY;
-            update_byte_SZAP(cpu, answer);
-            update_byte_CY(cpu, answer);
-            cpu->A = answer & 0xff;
+        case 0x99: {         // SBB C
+            uint16_t result = cpu->A - cpu->C - cpu->flags->CY;
+            update_byte_SZAP(cpu, result);
+            cpu->flags->CY = (cpu->A < (cpu->C + cpu->flags->CY));
+            cpu->A = result & 0xFF;
             break;
         }
-        case 0x9A: {         //SBB D
-            uint16_t answer = (uint16_t)cpu->A - (uint16_t)cpu->D - cpu->flags->CY;
-            update_byte_SZAP(cpu, answer);
-            update_byte_CY(cpu, answer);
-            cpu->A = answer & 0xff;
+        case 0x9A: {         // SBB D
+            uint16_t result = cpu->A - cpu->D - cpu->flags->CY;
+            update_byte_SZAP(cpu, result);
+            cpu->flags->CY = (cpu->A < (cpu->D + cpu->flags->CY));
+            cpu->A = result & 0xFF;
             break;
         }
-        case 0x9B: {         //SBB E
-            uint16_t answer = (uint16_t)cpu->A - (uint16_t)cpu->E - cpu->flags->CY;
-            update_byte_SZAP(cpu, answer);
-            update_byte_CY(cpu, answer);
-            cpu->A = answer & 0xff;
+        case 0x9B: {         // SBB E
+            uint16_t result = cpu->A - cpu->E - cpu->flags->CY;
+            update_byte_SZAP(cpu, result);
+            cpu->flags->CY = (cpu->A < (cpu->E + cpu->flags->CY));
+            cpu->A = result & 0xFF;
             break;
         }
-        case 0x9C: {         //SBB H
-            uint16_t answer = (uint16_t)cpu->A - (uint16_t)cpu->H - cpu->flags->CY;
-            update_byte_SZAP(cpu, answer);
-            update_byte_CY(cpu, answer);
-            cpu->A = answer & 0xff;
+        case 0x9C: {         // SBB H
+            uint16_t result = cpu->A - cpu->H - cpu->flags->CY;
+            update_byte_SZAP(cpu, result);
+            cpu->flags->CY = (cpu->A < (cpu->H + cpu->flags->CY));
+            cpu->A = result & 0xFF;
             break;
         }
-        case 0x9D: {         //SBB L
-            uint16_t answer = (uint16_t)cpu->A - (uint16_t)cpu->L - cpu->flags->CY;
-            update_byte_SZAP(cpu, answer);
-            update_byte_CY(cpu, answer);
-            cpu->A = answer & 0xff;
+        case 0x9D: {         // SBB L
+            uint16_t result = cpu->A - cpu->L - cpu->flags->CY;
+            update_byte_SZAP(cpu, result);
+            cpu->flags->CY = (cpu->A < (cpu->L + cpu->flags->CY));
+            cpu->A = result & 0xFF;
             break;
         }
-        case 0x9E: {         //SBB M
-            uint16_t address = (cpu->H << 8) | cpu->L;
-            uint16_t answer = (uint16_t)cpu->A - (uint16_t)read_memory(address) - cpu->flags->CY;
-            update_byte_SZAP(cpu, answer);
-            update_byte_CY(cpu, answer);
-            cpu->A = answer & 0xff;
+        case 0x9E: {         // SBB M
+            uint8_t value = read_memory(makeWord(cpu->H, cpu->L));
+            uint16_t result = cpu->A - value - cpu->flags->CY;
+            update_byte_SZAP(cpu, result);
+            cpu->flags->CY = (cpu->A < (value + cpu->flags->CY));
+            cpu->A = result & 0xFF;
             break;
         }
-        case 0x9F: {         //SBB A
-            uint16_t answer = (uint16_t)cpu->A - (uint16_t)cpu->A - cpu->flags->CY;
-            update_byte_SZAP(cpu, answer);
-            update_byte_CY(cpu, answer);
-            cpu->A = answer & 0xff;
+        case 0x9F: {         // SBB A
+            uint16_t result = cpu->A - cpu->A - cpu->flags->CY;
+            update_byte_SZAP(cpu, result);
+            cpu->flags->CY = 0;
+            cpu->A = result & 0xFF;
             break;
         }
-        case 0xA0: {         //ANA B
+        case 0xA0: {         // ANA B
             cpu->A &= cpu->B;
             update_byte_SZAP(cpu, cpu->A);
-            update_byte_CY(cpu, cpu->A);
+            cpu->flags->CY = 0;
             break;
         }
-        case 0xA1: {         //ANA C
+        case 0xA1: {         // ANA C
             cpu->A &= cpu->C;
             update_byte_SZAP(cpu, cpu->A);
-            update_byte_CY(cpu, cpu->A);
+            cpu->flags->CY = 0;
             break;
         }
-        case 0xA2: {         //ANA D
+        case 0xA2: {         // ANA D
             cpu->A &= cpu->D;
             update_byte_SZAP(cpu, cpu->A);
-            update_byte_CY(cpu, cpu->A);
+            cpu->flags->CY = 0;
             break;
         }
-        case 0xA3: {         //ANA E
+        case 0xA3: {         // ANA E
             cpu->A &= cpu->E;
             update_byte_SZAP(cpu, cpu->A);
-            update_byte_CY(cpu, cpu->A);
+            cpu->flags->CY = 0;
             break;
         }
-        case 0xA4: {         //ANA H
+        case 0xA4: {         // ANA H
             cpu->A &= cpu->H;
             update_byte_SZAP(cpu, cpu->A);
-            update_byte_CY(cpu, cpu->A);
+            cpu->flags->CY = 0;
             break;
         }
-        case 0xA5: {         //ANA L
+        case 0xA5: {         // ANA L
             cpu->A &= cpu->L;
             update_byte_SZAP(cpu, cpu->A);
-            update_byte_CY(cpu, cpu->A);
+            cpu->flags->CY = 0;
             break;
         }
-        case 0xA6: {         //ANA M
-            uint16_t address = (cpu->H << 8) | cpu->L;
-            cpu->A &= read_memory(address);
+        case 0xA6: {         // ANA M
+            uint8_t value = read_memory(makeWord(cpu->H, cpu->L));
+            cpu->A &= value;
             update_byte_SZAP(cpu, cpu->A);
-            update_byte_CY(cpu, cpu->A);
+            cpu->flags->CY = 0;
             break;
         }
-        case 0xA7: {         //ANA A
+        case 0xA7: {         // ANA A
             cpu->A &= cpu->A;
             update_byte_SZAP(cpu, cpu->A);
-            update_byte_CY(cpu, cpu->A);
+            cpu->flags->CY = 0;
             break;
         }
-        case 0xA8: {         //XRA B
+        case 0xA8: {         // XRA B
             cpu->A ^= cpu->B;
             update_byte_SZAP(cpu, cpu->A);
-            update_byte_CY(cpu, cpu->A);
+            cpu->flags->CY = 0;
             break;
         }
-        case 0xA9: {         //XRA C
+        case 0xA9: {         // XRA C
             cpu->A ^= cpu->C;
             update_byte_SZAP(cpu, cpu->A);
-            update_byte_CY(cpu, cpu->A);
+            cpu->flags->CY = 0;
             break;
         }
-        case 0xAA: {         //XRA D
+        case 0xAA: {         // XRA D
             cpu->A ^= cpu->D;
             update_byte_SZAP(cpu, cpu->A);
-            update_byte_CY(cpu, cpu->A);
+            cpu->flags->CY = 0;
             break;
         }
-        case 0xAB: {         //XRA E
+        case 0xAB: {         // XRA E
             cpu->A ^= cpu->E;
             update_byte_SZAP(cpu, cpu->A);
-            update_byte_CY(cpu, cpu->A);
+            cpu->flags->CY = 0;
             break;
         }
-        case 0xAC: {         //XRA H
+        case 0xAC: {         // XRA H
             cpu->A ^= cpu->H;
             update_byte_SZAP(cpu, cpu->A);
-            update_byte_CY(cpu, cpu->A);
+            cpu->flags->CY = 0;
             break;
         }
-        case 0xAD: {         //XRA L
+        case 0xAD: {         // XRA L
             cpu->A ^= cpu->L;
             update_byte_SZAP(cpu, cpu->A);
-            update_byte_CY(cpu, cpu->A);
+            cpu->flags->CY = 0;
             break;
         }
-        case 0xAE: {         //XRA M
-            uint16_t address = (cpu->H << 8) | cpu->L;
-            cpu->A ^= read_memory(address);
+        case 0xAE: {         // XRA M
+            uint8_t value = read_memory(makeWord(cpu->H, cpu->L));
+            cpu->A ^= value;
             update_byte_SZAP(cpu, cpu->A);
-            update_byte_CY(cpu, cpu->A);
+            cpu->flags->CY = 0;
             break;
         }
-        case 0xAF: {         //XRA A
+        case 0xAF: {         // XRA A
             cpu->A ^= cpu->A;
             update_byte_SZAP(cpu, cpu->A);
-            update_byte_CY(cpu, cpu->A);
+            cpu->flags->CY = 0;
             break;
         }
-        case 0xB0: {         //ORA B
+        case 0xB0: {         // ORA B
             cpu->A |= cpu->B;
             update_byte_SZAP(cpu, cpu->A);
-            update_byte_CY(cpu, cpu->A);
+            cpu->flags->CY = 0;
             break;
         }
-        case 0xB1: {         //ORA C
+        case 0xB1: {         // ORA C
             cpu->A |= cpu->C;
             update_byte_SZAP(cpu, cpu->A);
-            update_byte_CY(cpu, cpu->A);
+            cpu->flags->CY = 0;
             break;
         }
-        case 0xB2: {         //ORA D
+        case 0xB2: {         // ORA D
             cpu->A |= cpu->D;
             update_byte_SZAP(cpu, cpu->A);
-            update_byte_CY(cpu, cpu->A);
+            cpu->flags->CY = 0;
             break;
         }
-        case 0xB3: {         //ORA E
+        case 0xB3: {         // ORA E
             cpu->A |= cpu->E;
             update_byte_SZAP(cpu, cpu->A);
-            update_byte_CY(cpu, cpu->A);
+            cpu->flags->CY = 0;
             break;
         }
-        case 0xB4: {         //ORA H
+        case 0xB4: {         // ORA H
             cpu->A |= cpu->H;
             update_byte_SZAP(cpu, cpu->A);
-            update_byte_CY(cpu, cpu->A);
+            cpu->flags->CY = 0;
             break;
         }
-        case 0xB5: {         //ORA L
+        case 0xB5: {         // ORA L
             cpu->A |= cpu->L;
             update_byte_SZAP(cpu, cpu->A);
-            update_byte_CY(cpu, cpu->A);
+            cpu->flags->CY = 0;
             break;
         }
-        case 0xB6: {         //ORA M
-            uint16_t address = (cpu->H << 8) | cpu->L;
-            cpu->A |= read_memory(address);
+        case 0xB6: {         // ORA M
+            uint8_t value = read_memory(makeWord(cpu->H, cpu->L));
+            cpu->A |= value;
             update_byte_SZAP(cpu, cpu->A);
-            update_byte_CY(cpu, cpu->A);
+            cpu->flags->CY = 0;
             break;
         }
-        case 0xB7: {         //ORA A
+        case 0xB7: {         // ORA A
             cpu->A |= cpu->A;
             update_byte_SZAP(cpu, cpu->A);
-            update_byte_CY(cpu, cpu->A);
+            cpu->flags->CY = 0;
             break;
         }
-        case 0xB8: {         //CMP B
-            uint16_t value = (uint16_t)cpu->A - (uint16_t)cpu->B;
-            update_byte_SZAP(cpu, value);
-            update_byte_CY(cpu, value);
+        case 0xB8: {         // CMP B
+            uint16_t result = cpu->A - cpu->B;
+            update_byte_SZAP(cpu, result);
+            cpu->flags->CY = (cpu->A < cpu->B);
             break;
         }
-        case 0xB9: {         //CMP C
-            uint16_t value = (uint16_t)cpu->A - (uint16_t)cpu->C;
-            update_byte_SZAP(cpu, value);
-            update_byte_CY(cpu, value);
+        case 0xB9: {         // CMP C
+            uint16_t result = cpu->A - cpu->C;
+            update_byte_SZAP(cpu, result);
+            cpu->flags->CY = (cpu->A < cpu->C);
             break;
         }
-        case 0xBA: {         //CMP D
-            uint16_t value = (uint16_t)cpu->A - (uint16_t)cpu->D;
-            update_byte_SZAP(cpu, value);
-            update_byte_CY(cpu, value);
+        case 0xBA: {         // CMP D
+            uint16_t result = cpu->A - cpu->D;
+            update_byte_SZAP(cpu, result);
+            cpu->flags->CY = (cpu->A < cpu->D);
             break;
         }
-        case 0xBB: {         //CMP E
-            uint16_t value = (uint16_t)cpu->A - (uint16_t)cpu->E;
-            update_byte_SZAP(cpu, value);
-            update_byte_CY(cpu, value);
+        case 0xBB: {         // CMP E
+            uint16_t result = cpu->A - cpu->E;
+            update_byte_SZAP(cpu, result);
+            cpu->flags->CY = (cpu->A < cpu->E);
             break;
         }
-        case 0xBC: {         //CMP H
-            uint16_t value = (uint16_t)cpu->A - (uint16_t)cpu->H;
-            update_byte_SZAP(cpu, value);
-            update_byte_CY(cpu, value);
+        case 0xBC: {         // CMP H
+            uint16_t result = cpu->A - cpu->H;
+            update_byte_SZAP(cpu, result);
+            cpu->flags->CY = (cpu->A < cpu->H);
             break;
         }
-        case 0xBD: {         //CMP L
-            uint16_t value = (uint16_t)cpu->A - (uint16_t)cpu->L;
-            update_byte_SZAP(cpu, value);
-            update_byte_CY(cpu, value);
+        case 0xBD: {         // CMP L
+            uint16_t result = cpu->A - cpu->L;
+            update_byte_SZAP(cpu, result);
+            cpu->flags->CY = (cpu->A < cpu->L);
             break;
         }
-        case 0xBE: {         //CMP M
-            uint16_t address = (cpu->H << 8) | cpu->L;
-            uint16_t value = (uint16_t)cpu->A - (uint16_t)read_memory(address);
-            update_byte_SZAP(cpu, value);
-            update_byte_CY(cpu, value);
+        case 0xBE: {         // CMP M
+            uint8_t value = read_memory(makeWord(cpu->H, cpu->L));
+            uint16_t result = cpu->A - value;
+            update_byte_SZAP(cpu, result);
+            cpu->flags->CY = (cpu->A < value);
             break;
         }
-        case 0xBF: {         //CMP A
-            uint16_t value = (uint16_t)cpu->A - (uint16_t)cpu->A;
-            update_byte_SZAP(cpu, value);
-            update_byte_CY(cpu, value);
+        case 0xBF: {         // CMP A
+            uint16_t result = cpu->A - cpu->A;
+            update_byte_SZAP(cpu, result);
+            cpu->flags->CY = 0;
             break;
         }
-        case 0xC0: {         //RNZ (Return if not zero)
-            if (cpu->flags->Z == 0) {
-                ret(cpu);
-                opcode_size = 0;
-            }
+        case 0xC0: {         // RNZ
+            if (cpu->flags->Z == 0) ret(cpu);
             break;
         }
-        case 0xC1: {         //POP B (Pop two bytes from stack into BC)
-            cpu->C = read_memory(cpu->SP);
-            cpu->B = read_memory(cpu->SP + 1);
-            cpu->SP += 2;
+        case 0xC1: {         // POP B
+            cpu->C = read_memory(cpu->SP++);
+            cpu->B = read_memory(cpu->SP++);
             break;
         }
-        case 0xC2: {         //JNZ adr (Jump if not zero)
-            if (cpu->flags->Z == 0) {
-                uint16_t address = read_memory(cpu->PC + 1);
-                cpu->PC = address;
-                opcode_size = 0;
-            } else {
-                opcode_size = 3;
-            }
+        case 0xC2: {         // JNZ addr
+            if (cpu->flags->Z == 0) cpu->PC = read_opcode_data_word(cpu);
+            else opcode_size = 3;
             break;
         }
-        case 0xC3: {         //JMP adr (Jump unconditionally)
-            uint16_t address = read_memory(cpu->PC + 1);
-            cpu->PC = address;
+        case 0xC3: {         // JMP addr
+            cpu->PC = read_opcode_data_word(cpu);
             opcode_size = 0;
             break;
         }
-        case 0xC4: {         //CNZ adr (Call if not zero)
-            if (cpu->flags->Z == 0) {
-                uint16_t address = read_memory(cpu->PC + 1);
-                call(cpu, address);
-                opcode_size = 0;
-            } else {
-                opcode_size = 3;
-            }
+        case 0xC4: {         // CNZ addr
+            if (cpu->flags->Z == 0) call(cpu, read_opcode_data_word(cpu));
+            else opcode_size = 3;
             break;
         }
-        case 0xC5: {         //PUSH B (Push BC onto the stack)
-            write_memory(cpu->SP - 2, cpu->C);
-            write_memory(cpu->SP - 1, cpu->B);
-            cpu->SP -= 2;
+        case 0xC5: {         // PUSH B
+            write_memory(--cpu->SP, cpu->B);
+            write_memory(--cpu->SP, cpu->C);
             break;
         }
-        case 0xC6: {         //ADI byte (Add immediate to A)
-            uint16_t answer = (uint16_t)cpu->A + (uint16_t)read_memory(cpu->PC + 1);
-            update_byte_SZAP(cpu, answer);
-            update_byte_CY(cpu, answer);
-            cpu->A = answer & 0xff;
+        case 0xC6: {         // ADI D8
+            uint16_t result = cpu->A + read_memory(cpu->PC + 1);
+            update_byte_SZAP(cpu, result);
+            cpu->flags->CY = (result > 0xFF);
+            cpu->A = result & 0xFF;
             opcode_size = 2;
             break;
         }
-        case 0xC8: {         //RZ (Return if zero)
-            if (cpu->flags->Z == 1) {
-                ret(cpu);
-                opcode_size = 0;
-            }
+        case 0xC7: {break;}  //RST 0
+        case 0xC8: {         // RZ
+            if (cpu->flags->Z == 1) ret(cpu);
             break;
         }
-        case 0xC9: {         //RET (Return from subroutine)
+        case 0xC9: {         // RET
             ret(cpu);
-            opcode_size = 0;
             break;
         }
-        case 0xCA: {         //JZ adr (Jump if zero)
-            if (cpu->flags->Z == 1) {
-                uint16_t address = read_memory(cpu->PC + 1);
-                cpu->PC = address;
-                opcode_size = 0;
-            } else {
-                opcode_size = 3;
-            }
+        case 0xCA: {         // JZ addr
+            if (cpu->flags->Z == 1) cpu->PC = read_opcode_data_word(cpu);
+            else opcode_size = 3;
             break;
         }
-        case 0xCC: {         //CZ adr (Call if zero)
-            if (cpu->flags->Z == 1) {
-                uint16_t address = read_memory(cpu->PC + 1);
-                call(cpu, address);
-                opcode_size = 0;
-            } else {
-                opcode_size = 3;
-            }
+        case 0xCB: {break;}  //*JMP a16
+        case 0xCC: {         // CZ addr
+            if (cpu->flags->Z == 1) call(cpu, read_opcode_data_word(cpu));
+            else opcode_size = 3;
             break;
         }
-        case 0xCD: {         //CALL adr (Call subroutine)
-            uint16_t address = read_memory(cpu->PC + 1);
-            call(cpu, address);
-            opcode_size = 0;
+        case 0xCD: {         // CALL addr
+            call(cpu, read_opcode_data_word(cpu));
             break;
         }
-        case 0xCE: {         //ACI D8 (Add immediate to A with carry)
-            uint16_t value = cpu->A + (uint16_t)read_memory(cpu->PC + 1) + cpu->flags->CY;
-            update_byte_SZAP(cpu, value);
-            update_byte_CY(cpu, value);
-            cpu->A = value & 0xff;
+        case 0xCE: {         // ACI D8
+            uint16_t result = cpu->A + read_memory(cpu->PC + 1) + cpu->flags->CY;
+            update_byte_SZAP(cpu, result);
+            cpu->flags->CY = (result > 0xFF);
+            cpu->A = result & 0xFF;
             opcode_size = 2;
             break;
         }
-        case 0xD0: {         //RNC (Return if no carry)
-            if (cpu->flags->CY == 0) {
-                ret(cpu);
-                opcode_size = 0;
-            }
+        case 0xCF: {break;}  //RST 1
+        case 0xD0: {         // RNC
+            if (cpu->flags->CY == 0) ret(cpu);
             break;
         }
-        case 0xD1: {         //POP D (Pop two bytes from stack into DE)
-            cpu->E = read_memory(cpu->SP);
-            cpu->D = read_memory(cpu->SP + 1);
-            cpu->SP += 2;
+        case 0xD1: {         // POP D
+            cpu->E = read_memory(cpu->SP++);
+            cpu->D = read_memory(cpu->SP++);
             break;
         }
-        case 0xD2: {         //JNC adr (Jump if no carry)
-            if (cpu->flags->CY == 0) {
-                uint16_t address = read_memory(cpu->PC + 1);
-                cpu->PC = address;
-                opcode_size = 0;
-            } else {
-                opcode_size = 3;
-            }
+        case 0xD2: {         // JNC addr
+            if (cpu->flags->CY == 0) cpu->PC = read_opcode_data_word(cpu);
+            else opcode_size = 3;
             break;
         }
-        case 0xD3: {         //OUT D8 (Output A to port)
-            /*uint8_t port = read_memory(cpu->PC + 1);
-            if (cpu->callback->out) {
-                cpu->callback->out(port, cpu->A);
-            }
-            opcode_size = 2;
-            break;*/
-        }
-        case 0xD4: {         //CNC adr (Call if no carry)
-            if (cpu->flags->CY == 0) {
-                uint16_t address = read_memory(cpu->PC + 1);
-                call(cpu, address);
-                opcode_size = 0;
-            } else {
-                opcode_size = 3;
-            }
-            break;
-        }
-        case 0xD5: {         //PUSH D (Push DE onto the stack)
-            write_memory(cpu->SP - 2, cpu->E);
-            write_memory(cpu->SP - 1, cpu->D);
-            cpu->SP -= 2;
-            break;
-        }
-        case 0xD6: {         //SUI D8 (Subtract immediate from A)
-            uint8_t data = read_memory(cpu->PC + 1);
-            uint16_t value = (uint16_t)cpu->A - (uint16_t)data;
-            update_byte_SZAP(cpu, value);
-            update_byte_CY(cpu, value);
-            cpu->A = value & 0xff;
+        case 0xD3: {         // OUT D8
             opcode_size = 2;
             break;
         }
-        case 0xD8: {         //RC (Return if carry)
-            if (cpu->flags->CY == 1) {
-                ret(cpu);
-                opcode_size = 0;
-            }
+        case 0xD4: {         // CNC addr
+            if (cpu->flags->CY == 0) call(cpu, read_opcode_data_word(cpu));
+            else opcode_size = 3;
             break;
         }
-        case 0xDA: {         //JC adr (Jump if carry)
-            if (cpu->flags->CY == 1) {
-                uint16_t address = read_memory(cpu->PC + 1);
-                cpu->PC = address;
-                opcode_size = 0;
-            } else {
-                opcode_size = 3;
-            }
+        case 0xD5: {         // PUSH D
+            write_memory(--cpu->SP, cpu->D);
+            write_memory(--cpu->SP, cpu->E);
             break;
         }
-        case 0xDB: {         //IN D8 (Input to A from port)
-            /*uint8_t port = read_memory(cpu->PC + 1);
-            if (cpu->callback->in) {
-                cpu->A = cpu->callback->in(port);
-            }
-            opcode_size = 2;
-            break;*/
-        }
-        case 0xDC: {         //CC adr (Call if carry)
-            if (cpu->flags->CY == 1) {
-                uint16_t address = read_memory(cpu->PC + 1);
-                call(cpu, address);
-                opcode_size = 0;
-            } else {
-                opcode_size = 3;
-            }
-            break;
-        }
-        case 0xDE: {         //SBI D8 (Subtract immediate from A with borrow)
-            uint8_t data = read_memory(cpu->PC + 1);
-            uint16_t value = (uint16_t)cpu->A - (uint16_t)data - cpu->flags->CY;
-            update_byte_SZAP(cpu, value);
-            update_byte_CY(cpu, value);
-            cpu->A = value & 0xff;
+        case 0xD6: {         // SUI D8
+            uint16_t result = cpu->A - read_memory(cpu->PC + 1);
+            update_byte_SZAP(cpu, result);
+            cpu->flags->CY = (cpu->A < read_memory(cpu->PC + 1));
+            cpu->A = result & 0xFF;
             opcode_size = 2;
             break;
         }
-        case 0xE0: {         //RPO (Return if parity odd)
-            if (cpu->flags->P == 0) {
-                ret(cpu);
-                opcode_size = 0;
-            }
+        case 0xD7: {break;}  //RST 2
+        case 0xD8: {         // RC
+            if (cpu->flags->CY == 1) ret(cpu);
             break;
         }
-        case 0xE1: {         //POP H (Pop two bytes from stack into HL)
-            cpu->L = read_memory(cpu->SP);
-            cpu->H = read_memory(cpu->SP + 1);
-            cpu->SP += 2;
+        case 0xD9: {break;}  //*RET
+        case 0xDA: {         // JC addr
+            if (cpu->flags->CY == 1) cpu->PC = read_opcode_data_word(cpu);
+            else opcode_size = 3;
             break;
         }
-        case 0xE2: {         //JPO (Jump if parity odd)
-            if (cpu->flags->P == 0) {
-                uint16_t address = read_memory(cpu->PC + 1);
-                cpu->PC = address;
-                opcode_size = 0;
-            } else {
-                opcode_size = 3;
-            }
+        case 0xDB: {         // IN D8
+            opcode_size = 2;
             break;
         }
-        case 0xE3: {         //XTHL (Exchange HL with top of stack)
+        case 0xDC: {         // CC addr
+            if (cpu->flags->CY == 1) call(cpu, read_opcode_data_word(cpu));
+            else opcode_size = 3;
+            break;
+        }
+        case 0xDD: {break;}  //*CALL a16
+        case 0xDE: {         // SBI D8
+            uint16_t result = cpu->A - read_memory(cpu->PC + 1) - cpu->flags->CY;
+            update_byte_SZAP(cpu, result);
+            cpu->flags->CY = (cpu->A < (read_memory(cpu->PC + 1) + cpu->flags->CY));
+            cpu->A = result & 0xFF;
+            opcode_size = 2;
+            break;
+        }
+        case 0xDF: {break;}  //RST 3
+        case 0xE0: {         // RPO
+            if (cpu->flags->P == 0) ret(cpu);
+            break;
+        }
+        case 0xE1: {         // POP H
+            cpu->L = read_memory(cpu->SP++);
+            cpu->H = read_memory(cpu->SP++);
+            break;
+        }
+        case 0xE2: {         // JPO addr
+            if (cpu->flags->P == 0) cpu->PC = read_opcode_data_word(cpu);
+            else opcode_size = 3;
+            break;
+        }
+        case 0xE3: {         // XTHL
             uint8_t l = cpu->L;
-            uint8_t h = cpu->H;
             cpu->L = read_memory(cpu->SP);
-            cpu->H = read_memory(cpu->SP + 1);
             write_memory(cpu->SP, l);
+            uint8_t h = cpu->H;
+            cpu->H = read_memory(cpu->SP + 1);
             write_memory(cpu->SP + 1, h);
             break;
         }
-        case 0xE4: {         //CPO adr (Call if parity odd)
-            if (cpu->flags->P == 0) {
-                uint16_t address = read_memory(cpu->PC + 1);
-                call(cpu, address);
-                opcode_size = 0;
-            } else {
-                opcode_size = 3;
-            }
+        case 0xE4: {         // CPO addr
+            if (cpu->flags->P == 0) call(cpu, read_opcode_data_word(cpu));
+            else opcode_size = 3;
             break;
         }
-        case 0xE5: {         //PUSH H (Push HL onto the stack)
-            write_memory(cpu->SP - 2, cpu->L);
-            write_memory(cpu->SP - 1, cpu->H);
-            cpu->SP -= 2;
+        case 0xE5: {         // PUSH H
+            write_memory(--cpu->SP, cpu->H);
+            write_memory(--cpu->SP, cpu->L);
             break;
         }
-        case 0xE6: {         //ANI D8 (AND immediate with A)
-            uint16_t value = cpu->A & read_memory(cpu->PC + 1);
-            update_byte_SZAP(cpu, value);
-            update_byte_CY(cpu, value);
-            cpu->A = value & 0xff;
+        case 0xE6: {         // ANI D8
+            cpu->A &= read_memory(cpu->PC + 1);
+            update_byte_SZAP(cpu, cpu->A);
+            cpu->flags->CY = 0;
             opcode_size = 2;
             break;
         }
-        case 0xE8: {         //RPE (Return if parity even)
-            if (cpu->flags->P == 1) {
-                ret(cpu);
-                opcode_size = 0;
-            }
+        case 0xE7: {break;}  //RST 4
+        case 0xE8: {         // RPE
+            if (cpu->flags->P == 1) ret(cpu);
             break;
         }
-        case 0xE9: {         //PCHL (Load PC with HL)
-            cpu->PC = (cpu->H << 8) | cpu->L;
-            opcode_size = 0;
+        case 0xE9: {         // PCHL
+            cpu->PC = makeWord(cpu->H, cpu->L);
             break;
         }
-        case 0xEA: {         //JPE adr (Jump if parity even)
-            if (cpu->flags->P == 1) {
-                uint16_t address = read_memory(cpu->PC + 1);
-                cpu->PC = address;
-                opcode_size = 0;
-            } else {
-                opcode_size = 3;
-            }
+        case 0xEA: {         // JPE addr
+            if (cpu->flags->P == 1) cpu->PC = read_opcode_data_word(cpu);
+            else opcode_size = 3;
             break;
         }
-        case 0xEB: {         //XCHG (Exchange DE with HL)
+        case 0xEB: {         // XCHG
             util_swap(cpu->H, cpu->D);
             util_swap(cpu->L, cpu->E);
             break;
         }
-        case 0xEC: {         //CPE adr (Call if parity even)
-            if (cpu->flags->P == 1) {
-                uint16_t address = read_memory(cpu->PC + 1);
-                call(cpu, address);
-                opcode_size = 0;
-            } else {
-                opcode_size = 3;
-            }
+        case 0xEC: {         // CPE addr
+            if (cpu->flags->P == 1) call(cpu, read_opcode_data_word(cpu));
+            else opcode_size = 3;
             break;
         }
-        case 0xEE: {         //XRI (XOR immediate with A)
+        case 0xED: {break;}  //*CALL a16
+        case 0xEE: {         // XRI D8
             cpu->A ^= read_memory(cpu->PC + 1);
             update_byte_SZAP(cpu, cpu->A);
-            update_byte_CY(cpu, cpu->A);
+            cpu->flags->CY = 0;
             opcode_size = 2;
             break;
         }
-        case 0xF0: {         //RP (Return if positive)
-            if (cpu->flags->S == 0) {
-                ret(cpu);
-                opcode_size = 0;
-            }
+        case 0xEF: {break;}  //RST 5
+        case 0xF0: {         // RP
+            if (cpu->flags->S == 0) ret(cpu);
             break;
         }
-        case 0xF1: {         //POP PSW (Pop two bytes from stack into flags and A)
-            uint8_t flags = read_memory(cpu->SP);       // Read the flags from the stack
-            *(uint8_t*)(cpu->flags) = flags;            // Store the flags into the CPU flags structure
-            cpu->A = read_memory(cpu->SP + 1);          // Read the accumulator (A) from the stack
-            cpu->SP += 2;                               // Adjust the stack pointer
+        case 0xF1: {         // POP PSW
+            uint8_t flags = read_memory(cpu->SP++);
+            *(uint8_t*)(cpu->flags) = flags;
+            cpu->A = read_memory(cpu->SP++);
             break;
         }
-        case 0xF2: {         //JP (Jump if positive)
-            if (cpu->flags->S == 0) {
-                uint16_t address = read_memory(cpu->PC + 1);
-                cpu->PC = address;
-                opcode_size = 0;
-            } else {
-                opcode_size = 3;
-            }
+        case 0xF2: {         // JP addr
+            if (cpu->flags->S == 0) cpu->PC = read_opcode_data_word(cpu);
+            else opcode_size = 3;
             break;
         }
-        case 0xF4: {         //CP (Call if positive)
-            if (cpu->flags->S == 0) {
-                uint16_t address = read_memory(cpu->PC + 1);
-                call(cpu, address);
-                opcode_size = 0;
-            } else {
-                opcode_size = 3;
-            }
+        case 0xF3: {break;}  //DI
+        case 0xF4: {         // CP addr
+            if (cpu->flags->S == 0) call(cpu, read_opcode_data_word(cpu));
+            else opcode_size = 3;
             break;
         }
-        case 0xF5: {         //PUSH PSW (Push flags and A onto stack)
-            uint8_t psw = *((uint8_t*)(cpu->flags));  // Cast the flags structure to a single byte
-            write_memory(cpu->SP - 2, psw);           // Push the flags onto the stack
-            write_memory(cpu->SP - 1, cpu->A);        // Push the accumulator (A) onto the stack
-            cpu->SP -= 2;                             // Adjust the stack pointer
+        case 0xF5: {         // PUSH PSW
+            write_memory(--cpu->SP, cpu->A);
+            write_memory(--cpu->SP, *(uint8_t*)(cpu->flags));
             break;
         }
-        case 0xF6: {         //ORI D8 (OR immediate with A)
-            uint8_t data = read_memory(cpu->PC + 1);
-            uint8_t value = cpu->A | data;
-            update_byte_SZAP(cpu, value);
-            update_byte_CY(cpu, value);
-            cpu->A = value;
+        case 0xF6: {         // ORI D8
+            cpu->A |= read_memory(cpu->PC + 1);
+            update_byte_SZAP(cpu, cpu->A);
+            cpu->flags->CY = 0;
             opcode_size = 2;
             break;
         }
-        case 0xF8: {         //RM (Return if minus)
-            if (cpu->flags->S == 1) {
-                ret(cpu);
-                opcode_size = 0;
-            }
+        case 0xF7: {break;}  //RST 6
+        case 0xF8: {         // RM
+            if (cpu->flags->S == 1) ret(cpu);
             break;
         }
-        case 0xF9: {         //SPHL (Load SP with HL)
-            cpu->SP = (cpu->H << 8) | cpu->L;
+        case 0xF9: {         // SPHL
+            cpu->SP = makeWord(cpu->H, cpu->L);
             break;
         }
-        case 0xFA: {         //JM (Jump if minus)
-            if (cpu->flags->S == 1) {
-                uint16_t address = read_memory(cpu->PC + 1);
-                cpu->PC = address;
-                opcode_size = 0;
-            } else {
-                opcode_size = 3;
-            }
+        case 0xFA: {         // JM addr
+            if (cpu->flags->S == 1) cpu->PC = read_opcode_data_word(cpu);
+            else opcode_size = 3;
             break;
         }
-        case 0xFB: {         //EI (Enable interrupts)
+        case 0xFB: {         // EI
             cpu->interrupts_enabled = 1;
             break;
         }
-        case 0xFC: {         //CM (Call if minus)
-            if (cpu->flags->S == 1) {
-                uint16_t address = read_memory(cpu->PC + 1);
-                call(cpu, address);
-                opcode_size = 0;
-            } else {
-                opcode_size = 3;
-            }
+        case 0xFC: {         // CM addr
+            if (cpu->flags->S == 1) call(cpu, read_opcode_data_word(cpu));
+            else opcode_size = 3;
             break;
         }
-        case 0xFE: {         //CPI D8 (Compare A with immediate)
-            uint16_t value = (uint16_t)cpu->A - (uint16_t)read_memory(cpu->PC + 1);
-            update_byte_SZAP(cpu, value);
-            update_byte_CY(cpu, value);
+        case 0xFD: {break;}  //*CALL a16
+        case 0xFE: {         // CPI D8
+            uint16_t result = cpu->A - read_memory(cpu->PC + 1);
+            update_byte_SZAP(cpu, result);
+            cpu->flags->CY = (cpu->A < read_memory(cpu->PC + 1));
             opcode_size = 2;
             break;
         }
+        case 0xFF: {break;}  //RST 7
         default: {
-            printf("Unknown opcode: 0x%02X at address 0x%04X\n", opcode, cpu->PC);
-            error("");
+            printf("Unknown opcode: 0x%02X\n", opcode);
             break;
         }
+        cpu->PC += opcode_size;
+    
     }
-    cpu->PC += opcode_size;
-
 }
 
 void ret(CPU *cpu) {
@@ -1554,4 +1391,13 @@ void ret(CPU *cpu) {
 	uint8_t pchi = read_memory(cpu->SP + 1);
 	cpu->PC = ((uint16_t)pchi << 8) | (uint16_t)pclo;
     cpu->SP += 2;
+}
+
+uint16_t readOpcodeDataWord(CPU *cpu) {
+		uint16_t value = ((uint16_t)read_memory(cpu->PC + 2) << 8) | ((uint16_t)read_memory(cpu->PC + 1));
+		return value;
+}
+
+uint16_t makeWord(uint8_t hi, uint8_t lo) {
+		return (((uint16_t)hi) << 8) | ((uint16_t)lo);
 }

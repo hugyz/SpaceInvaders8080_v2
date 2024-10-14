@@ -12,10 +12,12 @@ void memory_init(void) {
     memory = (uint8_t *)malloc(MEMORY_SIZE);
     memset(memory, 0, MEMORY_SIZE);  // Initialize memory to zero
 }
+
 void memory_free() {
     free(memory);
     memory = NULL;
 }
+
 uint8_t read_memory(uint16_t address) {
     if (address >= MEMORY_START && address < MEMORY_END) return memory[address];
     else error("read_memory out of bounds");
