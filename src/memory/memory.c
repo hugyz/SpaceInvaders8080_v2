@@ -19,18 +19,20 @@ void memory_free() {
 }
 
 uint8_t read_memory(uint16_t address) {
-    if (address >= MEMORY_START && address < MEMORY_END) return memory[address];
-    else error("read_memory out of bounds");
+    if (address >= MEMORY_START && address < MEMORY_END)
+        return memory[address];
+    else
+        error("read_memory out of bounds");
 }
 
 void write_memory(uint16_t address, uint8_t value) {
-    if(address >= ROM_START && address < ROM_END) error("cannot write to rom");
+    if(address >= ROM_START && address < ROM_END) 
+        error("cannot write to rom");
     else memory[address] = value;
 }
 
-
 void load_rom_into_mem(void) {
-    const char* rom_file_path = "C:\\Users\\hugoz\\OneDrive\\Desktop\\Projects\\SpaceInvaders8080_v2\\roms\\cpudiag\\cpudiag.bin";
+    const char* rom_file_path = "C:\\Users\\hugoz\\OneDrive\\Desktop\\Projects\\SpaceInvaders8080_v2\\roms\\invaders\\invaders";
     //const char* rom_file_path = "C:\\Users\\hugoz\\OneDrive\\Desktop\\Projects\\SpaceInvaders8080_v2\roms\\invaders\\invaders";
 
     FILE *rom_file = fopen(rom_file_path, "rb");

@@ -12,7 +12,10 @@ uint8_t input_read(uint8_t port);
 void input_write(uint8_t port, uint8_t value);
 void input_update(uint8_t *state);
 
+uint8_t update_button_state();
+void reset_ports();
+
 // This function emulates the machine's input handling
-uint8_t machine_in(uint8_t state, uint8_t port);
+uint8_t machine_in(uint8_t port);
 
 #endif  // INPUT_H

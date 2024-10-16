@@ -3,15 +3,6 @@
 
 #include <stdint.h>  // Include this for fixed-width integer types
 
-typedef uint8_t (*CallbackIn)(uint8_t port);
-typedef void (*CallbackOut)(uint8_t port, uint8_t value);
-
-// Define the Callbacks struct after declaring the function pointer types
-typedef struct {
-    CallbackIn in;  // Function pointer for handling IN opcode
-    CallbackOut out;  // Function pointer for handling OUT opcode
-} Callbacks;
-
 // Define Flags struct
 typedef struct {
     uint8_t Z : 1;  // Zero flag
@@ -33,22 +24,23 @@ typedef struct {
     uint16_t PC;
 
     Flags *flags;
-    Callbacks *callback;
 
     uint64_t num_steps;
     uint8_t interrupts_enabled;
     uint32_t cycles;
 } CPU; 
 
-void setCallbackIn(CPU *cpu, CallbackIn callback);
-void setCallbackOut(CPU *cpu, CallbackOut callback);
-uint8_t cpu_execute_instruction(CPU* cpu);
+uint16_t cpu_execute_instruction(CPU* cpu);
 CPU* cpu_init(void);
 void cpu_free(CPU* cpu);
 void cpu_reset(CPU* cpu);
-void ret(CPU *cpu);
 void interrupt(CPU *cpu, int interrupt_num);
 int get_num_steps(CPU *cpu);
-uint16_t makeWord(uint8_t hi, uint8_t lo);
+
+
+void ret(CPU *cpu);
+void call(CPU *cpu, uint16_t address, uint16_t return_address);
+uint16_t read_opcode_data_word(CPU *cpu);
+uint16_t make_word(uint8_t hi, uint8_t lo);
 
 #endif
