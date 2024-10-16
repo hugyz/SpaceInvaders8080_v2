@@ -15,12 +15,13 @@ SDL2 - 2.30.8
 SDL2_mixer 2.8.0
 
 
-
+malloc alloc
 Calloc instead of memset?
 
 Assign array extern, static
 static exclusive to the class
 extern avaliable to all files that include
+
 arr[] goes to stack
 *arr goes to heap
 
