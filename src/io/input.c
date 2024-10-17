@@ -18,14 +18,14 @@ void input_write(uint8_t port, uint8_t value) {
 void input_update(uint8_t * state) {
 
     if(state[SDL_SCANCODE_EQUALS])
-                exit(0);
+        exit(0);
 
     // Port 0: DIP4, Fire, Left, Right
     input_ports[0] = 0x0E;  // Bits 1, 2, 3 are always 1
     if (state[SDL_SCANCODE_SPACE]) input_ports[0] |= 0x10;  // Fire
     if (state[SDL_SCANCODE_LEFT])  input_ports[0] |= 0x20;  // Move left
     if (state[SDL_SCANCODE_RIGHT]) input_ports[0] |= 0x40;  // Move right
-    printf("Port 0mofo: %02X\n", input_ports[0]);
+    printf("Port 0: %02X\n", input_ports[0]);
     if(input_ports[0] == 0x0E) return;
 
     // Port 1: CREDIT, 2P Start, 1P Start, Fire, Left, Right
@@ -60,25 +60,28 @@ void reset_ports() {
 }
 
 uint8_t machine_in(uint8_t port) {
-    uint8_t a;    
+    uint8_t a = 0;  // Initialize to 0 to avoid potential garbage value
     switch(port) {
         case 0: {
             a = input_ports[0];
+            break;  // Added break to prevent fall-through
         }
         case 1: {
             a = input_ports[1];
+            break;  // Added break
         }
         case 2: {
             a = input_ports[2];
+            break;  // Added break
         }
         case 3: {    
-               a = read_shift_register();
-               break;
-           }
+            a = read_shift_register();
+            break;
+        }
         default: {
-            error("not a port #");
+            error("not a port #");  // Ensure this error handling function properly deals with errors
             break;
         } 
-       }    
-       return a;  
+    }    
+    return a;  
 }

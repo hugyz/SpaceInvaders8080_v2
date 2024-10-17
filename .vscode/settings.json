@@ -17,6 +17,9 @@
         "input.h": "c",
         "sdl.h": "c",
         "stdbool.h": "c",
-        "stdio.h": "c"
+        "stdio.h": "c",
+        "sound.h": "c",
+        "video.h": "c",
+        "stdlib.h": "c"
     }
 }

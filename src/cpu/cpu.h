@@ -42,5 +42,6 @@ void ret(CPU *cpu);
 void call(CPU *cpu, uint16_t address, uint16_t return_address);
 uint16_t read_opcode_data_word(CPU *cpu);
 uint16_t make_word(uint8_t hi, uint8_t lo);
+void rst_helper(CPU *cpu, uint16_t address);
 
 #endif

@@ -3,9 +3,10 @@
         {
             "name": "Win32",
             "includePath": [
-                "${workspaceFolder}/**", 
-                "C:/SDL2/include", 
-                "C:/SDL2_mixer/include"
+                "${workspaceFolder}/**",
+                "C:/SDL2/include",
+                "C:/SDL2_mixer/include",
+                "${workspaceFolder}/src/sound"
             ],
             "defines": [
                 "_DEBUG",
